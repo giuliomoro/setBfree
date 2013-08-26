@@ -308,11 +308,21 @@
 #define CR_ENV_INS (CR_CPYENV & CR_ADDENV)
 
 /* Rendering flag bits */
-#define ORF_MODIFIED 0x0004
-#define ORF_ADDED    0x0002
-#define ORF_REMOVED  0x0001
-/* Composite flag bits */
+#define ORF_MODIFIED (1 << 2)
+#define ORF_ADDED    (1 << 1)
+#define ORF_REMOVED  (1 << 0)
+
+#ifdef LONG_ENVELOPES
+#define ORF_PERSISTED (1 << 3)
+#define OR_ADD (ORF_MODIFIED | ORF_ADDED | ORF_PERSISTED)
+#define CLEAR_RFLAGS_MASK (ORF_PERSISTED) // OR here those flags that should not be cleared
+#else /* LONG_ENVELOPES */
+#define ORF_PERSISTED 0
 #define OR_ADD (ORF_MODIFIED | ORF_ADDED)
+#define CLEAR_RFLAGS_MASK 0
+#endif /* LONG_ENVELOPES */
+
+/* Composite flag bits */
 #define OR_REM (ORF_MODIFIED | ORF_REMOVED)
 
 
@@ -348,8 +358,13 @@ static void initValues (struct b_tonegen *t) {
   t->msgQueueWriter = t->msgQueue;
   t->msgQueueReader = t->msgQueue;
   t->msgQueueEnd = &(t->msgQueue[MSGQSZ]);
+#ifdef LONG_ENVELOPES
+  t->persQueueWriter = t->persQueue;
+  t->persQueueReader = t->persQueue;
+  t->persQueueEnd = &(t->persQueue[PERQSZ]);
+#endif /* LONG_ENVELOPES */
   t->envAttackModel  = ENV_CLICK;
-  t->envReleaseModel = ENV_LINEAR;
+  t->envReleaseModel = ENV_COSINE;
 
   t->envAttackClickLevel = 0.50;
   t->envReleaseClickLevel = 0.25;
@@ -1664,6 +1679,10 @@ static void initOscillators (struct b_tonegen *t, int variant, double precision)
      */
 
     osp->lengthSamples = wszs;
+#ifdef LONG_ENVELOPES
+    osp->env = NULL;
+	osp->envEnd = NULL;
+#endif /* LONG_ENVELOPES */
 
     /* Reset the harmonics list to the compile-time value. */
 
@@ -1955,7 +1974,7 @@ void setEnvAttackClickLevel (struct b_tonegen *t, double u) {
 static void setEnvAtkClkLength (int * p, double u) {
   if (p != NULL) {
     if ((0.0 <= u) && (u <= 1.0)) {
-      *p = (int) (((double) BUFFER_SIZE_SAMPLES) * u);
+      *p = (int) (((double) ENVELOPE_LENGTH) * u);
     }
   }
 }
@@ -2550,13 +2569,13 @@ int oscConfig (struct b_tonegen *t, ConfigContext * cfg) {
  * This routine initialises the envelope shape tables.
  */
 static void initEnvelopes (struct b_tonegen *t) {
-  int bss = BUFFER_SIZE_SAMPLES;
+  int bss = ENVELOPE_LENGTH;
   int b;
   int i;			/* 0 -- 127 */
   int burst;			/* Samples in noist burst */
   int bound;
   int start;			/* Sample where burst starts */
-  double T = (double) (BUFFER_SIZE_SAMPLES - 1); /* 127.0 */
+  double T = (double) (ENVELOPE_LENGTH - 1); /* 127.0 */
 
   for (b = 0; b < 9; b++) {
 
@@ -2640,24 +2659,24 @@ static void initEnvelopes (struct b_tonegen *t) {
     /* cos(0)=1.0, cos(PI/2)=0, cos(PI)=-1.0 */
 
     if (t->envAttackModel == ENV_COSINE) {	/* Sigmoid decay */
-      for (i = 0; i < BUFFER_SIZE_SAMPLES; i++) {
-	int d = BUFFER_SIZE_SAMPLES - (i + 1);
+      for (i = 0; i < ENVELOPE_LENGTH; i++) {
+	int d = ENVELOPE_LENGTH - (i + 1);
 	double a = (M_PI * (double) d) / T;	/* PI < a <= 0 */
 	t->attackEnv [b][i] = 0.5 + (0.5 * cos (a));
       }
     }
 
     if (t->envReleaseModel == ENV_COSINE) {
-      for (i = 0; i < BUFFER_SIZE_SAMPLES; i++) {
+      for (i = 0; i < ENVELOPE_LENGTH; i++) {
 	double a = (M_PI * (double) i) / T;	/* 0 < b <= PI */
 	t->releaseEnv[b][i] = 0.5 - (0.5 * cos (a));
       }
     }
 
     if (t->envAttackModel == ENV_LINEAR) {	/* Linear decay */
-      int k = BUFFER_SIZE_SAMPLES;			/* TEST SPECIAL */
+      int k = ENVELOPE_LENGTH;			/* TEST SPECIAL */
 
-      for (i = 0; i < BUFFER_SIZE_SAMPLES; i++) {
+      for (i = 0; i < ENVELOPE_LENGTH; i++) {
 	if (i < k) {
 	  t->attackEnv[b][i]  = ((float) i) / (float) k;
 	} else {
@@ -2667,9 +2686,9 @@ static void initEnvelopes (struct b_tonegen *t) {
     }
 
     if (t->envReleaseModel == ENV_LINEAR) {
-      int k = BUFFER_SIZE_SAMPLES;			/* TEST SPECIAL */
+      int k = ENVELOPE_LENGTH;			/* TEST SPECIAL */
 
-      for (i = 0; i < BUFFER_SIZE_SAMPLES; i++) {
+      for (i = 0; i < ENVELOPE_LENGTH; i++) {
 	if (i < k) {
 	  t->releaseEnv[b][i] = ((float) i) / (float) k;
 	} else {
@@ -2854,17 +2873,19 @@ void initToneGenerator (struct b_tonegen *t, void *m) {
   }
 
   if (t->envAtkClkMinLength<0) {
-    t->envAtkClkMinLength = floor(SampleRateD * 8.0 / 22050.0);
+    t->envAtkClkMinLength = floor(SampleRateD * (ENVELOPE_LENGTH * 0.1f) / 22050.0);
+    printf("min: %d\n", t->envAtkClkMinLength);
   }
   if (t->envAtkClkMaxLength<0) {
-    t->envAtkClkMaxLength = ceil(SampleRateD * 40.0 / 22050.0);
+    t->envAtkClkMaxLength = ceil(SampleRateD * (ENVELOPE_LENGTH * 0.9f) / 22050.0);
+    printf("max: %d\n", t->envAtkClkMaxLength);
   }
 
-  if (t->envAtkClkMinLength > BUFFER_SIZE_SAMPLES) {
-    t->envAtkClkMinLength = BUFFER_SIZE_SAMPLES;
+  if (t->envAtkClkMinLength > ENVELOPE_LENGTH) {
+    t->envAtkClkMinLength = ENVELOPE_LENGTH;
   }
-  if (t->envAtkClkMaxLength > BUFFER_SIZE_SAMPLES) {
-    t->envAtkClkMaxLength = BUFFER_SIZE_SAMPLES;
+  if (t->envAtkClkMaxLength > ENVELOPE_LENGTH) {
+    t->envAtkClkMaxLength = ENVELOPE_LENGTH;
   }
 
   applyDefaultConfiguration (t);
@@ -3043,7 +3064,6 @@ void oscKeyOn (struct b_tonegen *t, unsigned char keyNumber, unsigned char realK
   if (t->msgQueueWriter == t->msgQueueEnd) {
     t->msgQueueWriter = t->msgQueue;
   }
-
   /*  printf ("\rON :%3d", keyNumber); fflush (stdout); */
 
 }
@@ -3209,20 +3229,31 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
    * At this point, new oscillators has been added to the active list
    * and removed oscillators are still on the list.
    */
-
   for (i = 0; i < t->activeOscLEnd; i++) {
+      int log = 0;
+      if(i == 0) log = 0;
 
     int oscNumber = t->activeOscList[i]; /* Get the oscillator number */
     AOTElement * aop = &(t->aot[oscNumber]); /* Get a pointer to active struct */
     osp = &(t->oscillators[oscNumber]); /* Point to the oscillator */
+    if(log) rt_printf(">>>>\n");
+    if(log) rt_printf("sumUpper: %.3f, sumLower: %.3f, sumPedal: %.3f\n",
+      aop->sumUpper, aop->sumLower, aop->sumPedal);
+    if(log) rt_printf("sumSwell: %.3f, sumScanr: %.3f, sumPercn: %.3f\n",
+      aop->sumSwell, aop->sumScanr, aop->sumPercn);
+	if(log) rt_printf("rflags: %#x\n", osp->rflags);
 
-    if (osp->rflags & ORF_REMOVED) { /* Decay instruction for removed osc. */
+    if (osp->rflags & ORF_REMOVED) {/* Decay instruction for removed osc. */
       /* Put it on the removal list */
       removedList[removedEnd++] = oscNumber;
-
-      /* All envelopes, both attack and release must traverse 0-1. */
+#ifdef LONG_ENVELOPES
+      osp->env = NULL;
+	  aop->sumSwell = 0;
+#endif /* LONG_ENVELOPES */
+			/* All envelopes, both attack and release must traverse 0-1. */
 
       t->coreWriter->env = t->releaseEnv[i & 7];
+	  rt_printf("Release envelope\n");
 
       if (copyDone) {
         t->coreWriter->opr = CR_ADDENV;
@@ -3275,9 +3306,11 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
        * used. For modified oscillators we provide the update below.
        */
       if (osp->rflags & ORF_ADDED) {
+        if(log) rt_printf("ORF_ADDED\n");
         t->coreWriter->sgain = t->coreWriter->pgain = t->coreWriter->vgain = 0.0;
       }
-      else {
+      else { /* ORF_MODIFIED */
+        if(log) rt_printf("ORF_MODIFIED or not\n");
         t->coreWriter->sgain = aop->sumSwell;
         t->coreWriter->pgain = aop->sumPercn;
         t->coreWriter->vgain = aop->sumScanr;
@@ -3285,67 +3318,113 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
       /* Update the oscillator's contribution to each busgroup mix */
 
-      if ((osp->rflags & ORF_MODIFIED) || t->drawBarChange) {
+      float sumUpper = 0.0;
+      float sumLower = 0.0;
+      float sumPedal = 0.0;
+      if ((osp->rflags & (ORF_MODIFIED | ORF_PERSISTED)) || t->drawBarChange) {
+	  if(log) rt_printf("do drawbarchange\n");
         int d;
-        float sum = 0.0;
 
         for (d = UPPER_BUS_LO; d < UPPER_BUS_END; d++) {
-          sum += aop->busLevel[d] * t->drawBarGain[d];
+          sumUpper += aop->busLevel[d] * t->drawBarGain[d];
         }
-        aop->sumUpper = sum;
-        sum = 0.0;
         for (d = LOWER_BUS_LO; d < LOWER_BUS_END; d++) {
-          sum += aop->busLevel[d] * t->drawBarGain[d];
+          sumLower += aop->busLevel[d] * t->drawBarGain[d];
         }
-        aop->sumLower = sum;
-        sum = 0.0;
         for (d = PEDAL_BUS_LO; d < PEDAL_BUS_END; d++) {
-          sum += aop->busLevel[d] * t->drawBarGain[d];
+          sumPedal += aop->busLevel[d] * t->drawBarGain[d];
         }
-        aop->sumPedal = sum;
         reroute = 1;
       }
 
       /* If the group mix or routing has changed */
 
-      if (reroute || recomputeRouting) {
+	  float sumPercn;
+	  float sumSwell;
+	  float sumScanr;
+	  int doRecomputeRouting = reroute || recomputeRouting;
+	  // TODO:handle recomputeRouting separately: currently it is probably mislead
+	  // by the fact that it uses the old settings
 
-        if (t->oldRouting & RT_PERC) { /* Percussion */
-          aop->sumPercn = aop->busLevel[t->percSendBus];
-        }
-        else {
-          aop->sumPercn = 0.0;
-        }
+    if (doRecomputeRouting) {
+	  if(log) rt_printf("do recomputerouting\n");
 
-        aop->sumScanr = 0.0;	/* Initialize scanner level */
-        aop->sumSwell = aop->sumPedal; /* Initialize swell level */
+      if (t->oldRouting & RT_PERC) { /* Percussion */
+        sumPercn = aop->busLevel[t->percSendBus];
+      }
+      else {
+        sumPercn = 0.0;
+      }
 
-        if (t->oldRouting & RT_UPPRVIB) { /* Upper manual ... */
-          aop->sumScanr += aop->sumUpper; /* ... to vibrato */
-        }
-        else {
-          aop->sumSwell += aop->sumUpper; /* ... to swell pedal */
-        }
+      sumScanr = 0.0;	/* Initialize scanner level */
+      sumSwell = sumPedal; /* Initialize swell level */
 
-        if (t->oldRouting & RT_LOWRVIB) { /* Lower manual ... */
-          aop->sumScanr += aop->sumLower; /* ... to vibrato */
-        }
-        else {
-          aop->sumSwell += aop->sumLower; /* ... to swell pedal */
-        }
-      }	/* if rerouting */
+      if (t->oldRouting & RT_UPPRVIB) { /* Upper manual ... */
+        sumScanr += sumUpper; /* ... to vibrato */
+      }
+      else {
+        sumSwell += sumUpper; /* ... to swell pedal */
+      }
 
+      if (t->oldRouting & RT_LOWRVIB) { /* Lower manual ... */
+        sumScanr += sumLower; /* ... to vibrato */
+      }
+      else {
+        sumSwell += sumLower; /* ... to swell pedal */
+      }
+    }
+    else {
+      sumPercn = aop->sumPercn;
+      sumSwell = aop->sumSwell;
+      sumScanr = aop->sumScanr;
+    } /* if rerouting */
+
+#ifdef LONG_ENVELOPES
+      short envelopeCompleted = 0;
+#endif /* LONG_ENVELOPES */
       /* Emit instructions for oscillator */
       if (osp->rflags & OR_ADD) {
+        float* env;
+#ifdef LONG_ENVELOPES
+        env = osp->env;
+        if (env == NULL) { // the envelope is not init'd
+          env = t->attackEnv[i & 7]; // pick one envelope
+		  rt_printf("Start attack\n");
+          osp->envEnd = env + ENVELOPE_LENGTH;
+          osp->rflags |= ORF_PERSISTED;
+        }
+        else { // the envelope is already init'd
+          env += BUFFER_SIZE_SAMPLES; // increment it 
+        }
+        if(env) { //the envelope is already active
+          int remaining = (osp->envEnd - env) - BUFFER_SIZE_SAMPLES;
+          if (remaining <= 0) { // the envelope is completed
+            envelopeCompleted = 1; 
+            osp->env = NULL; // deactivate it
+			if(log) rt_printf("clearin persistency: %#x\n", osp->rflags);
+            osp->rflags &= ~ORF_PERSISTED; // forget about it
+			if(log) rt_printf("cleared persistency: %#x\n", osp->rflags);
+          }
+          else { //remember current envelope
+            //if(log == 1) rt_printf("non completed: %d remaining\n", remaining);
+            osp->env = env;
+          }
+        }
+#else
+        env = t->attackEnv[i & 7];
+		rt_printf("Start attack\n");
+#endif /* LONG_ENVELOPES */
+
         /* Envelope attack instruction */
-        t->coreWriter->env = t->attackEnv[i & 7];
+        t->coreWriter->env = env;
+
         /* Next gain values */
-        t->coreWriter->nsgain = aop->sumSwell;
-        t->coreWriter->npgain = aop->sumPercn;
-        t->coreWriter->nvgain = aop->sumScanr;        
+        t->coreWriter->nsgain = sumSwell;
+        t->coreWriter->npgain = sumPercn;
+        t->coreWriter->nvgain = sumScanr;        
 
         if (copyDone) {
-	      t->coreWriter->opr = CR_ADDENV;
+          t->coreWriter->opr = CR_ADDENV;
         }
         else {
           t->coreWriter->opr = CR_CPYENV;
@@ -3353,6 +3432,9 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
         }
       }
       else {
+#ifdef LONG_ENVELOPES
+		envelopeCompleted = 1; 
+#endif /* LONG_ENVELOPES */
         if (copyDone) {
           t->coreWriter->opr = CR_ADD;
         }
@@ -3361,6 +3443,26 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
           copyDone = 1;
         }
       }
+      if(log) rt_printf("sgain: %.3f, nsgain: %.3f\n",
+        t->coreWriter->sgain,
+        t->coreWriter->nsgain
+        );
+
+#ifdef LONG_ENVELOPES
+      if (envelopeCompleted || !(osp->rflags & ORF_PERSISTED)) { // the envelope is completed, store the values
+        if(log) rt_printf("stored the values\n");
+        if(log && envelopeCompleted) rt_printf("--------------------------------------------------------\n");
+#endif /* LONG_ENVELOPES */
+        aop->sumUpper = sumUpper;
+        aop->sumLower = sumLower;
+        aop->sumPedal = sumPedal;
+        aop->sumSwell = sumSwell;
+        aop->sumScanr = sumScanr;
+        aop->sumPercn = sumPercn;
+#ifdef LONG_ENVELOPES
+      }
+#endif /* LONG_ENVELOPES */
+
 
       /* The source is the wave of the oscillator at its current position */
       t->coreWriter->src = osp->wave + osp->pos;
@@ -3379,7 +3481,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
         t->coreWriter->src = osp->wave; /* Start of wave because of wrap */
         t->coreWriter->off = prev->cnt;
         if (t->coreWriter->opr & 2) {
-		  t->coreWriter->env = prev->env + prev->cnt; /* Continue envelope */
+          t->coreWriter->env = prev->env + prev->cnt; /* Continue envelope */
         }
         /* The gains are identical to the previous instruction */
         t->coreWriter->sgain = prev->sgain;
@@ -3402,8 +3504,13 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
     } /* else aot element not removed, ie modified or added */
 
-    /* Clear rendering flags */
-    osp->rflags = 0;
+    if(log) rt_printf("sumUpper: %.3f, sumLower: %.3f, sumPedal: %.3f\n",
+      aop->sumUpper, aop->sumLower, aop->sumPedal);
+    if(log) rt_printf("sumSwell: %.3f, sumScanr: %.3f, sumPercn: %.3f\n",
+      aop->sumSwell, aop->sumScanr, aop->sumPercn);
+    /* Clear rendering flags, excluding persistency */
+    osp->rflags &= CLEAR_RFLAGS_MASK;
+    if(log) rt_printf("<<<<\n");
 
   } /* for the active list */
 
@@ -3495,6 +3602,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
     } else {
 
       if (opr & CR_ENV_INS) { /* CPY and CPYENV */
+        //rt_printf("CPYENV: gs: %.3f, e: %.3f, ds: %.3f\n", gs, *ep, ds);
         for (; 0 < n; n--) { /* CPYENV */
           const float x = (float) (*xp++);
           const float e =  *ep++;

@@ -1,7 +1,20 @@
 # TODO include this only once and export variables
 
 PREFIX ?= /usr/local
+ARCHITECTURE ?= $(shell uname -m)
+ifneq (,$(findstring arm,$(ARCHITECTURE)))
+ARCHITECTURE=arm
+else
+ARCHITECTURE=x86
+endif
+
+ifeq ($(ARCHITECTURE),arm)
+OPTIMIZATIONS ?= -O3 -march=armv7-a -mtune=cortex-a8 -mfloat-abi=hard -mfpu=neon -ftree-vectorize
+else
 OPTIMIZATIONS ?= -msse -msse2 -mfpmath=sse -ffast-math -fomit-frame-pointer -O3 -fno-finite-math-only
+endif
+
+
 ENABLE_CONVOLUTION ?= no
 FONTFILE?=/usr/share/fonts/truetype/ttf-bitstream-vera/VeraBd.ttf
 VERSION?=$(shell git describe --tags HEAD 2>/dev/null | sed 's/-g.*$$//;s/^v//' || true)

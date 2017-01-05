@@ -159,9 +159,9 @@ void initSynth(struct b_instance *inst, double rate) {
   /* initAll() */
   initToneGenerator (inst->synth, inst->midicfg);
   initVibrato (inst->synth, inst->midicfg);
-  initPreamp (inst->preamp, inst->midicfg);
-  initReverb (inst->reverb, inst->midicfg, rate);
-  initWhirl (inst->whirl, inst->midicfg, rate);
+  //initPreamp (inst->preamp, inst->midicfg);
+  //initReverb (inst->reverb, inst->midicfg, rate);
+  //initWhirl (inst->whirl, inst->midicfg, rate);
   initRunningConfig(inst->state, inst->midicfg);
   /* end - initAll() */
 
@@ -185,11 +185,11 @@ static void
 freeSynth(struct b_instance *inst)
 {
   if (!inst) return;
-  freeReverb(inst->reverb);
-  freeWhirl(inst->whirl);
+  //freeReverb(inst->reverb);
+  //freeWhirl(inst->whirl);
   freeToneGenerator(inst->synth);
   freeMidiCfg(inst->midicfg);
-  freePreamp(inst->preamp);
+  //freePreamp(inst->preamp);
   freeProgs(inst->progs);
   freeRunningConfig(inst->state);
 }
@@ -238,6 +238,8 @@ static void scramble (B3S *b3s, float * const buf, const size_t n_samples)
 }
 #endif
 
+int rt_printf(const char *format, ...);
+
 static uint32_t synthSound (B3S *instance, uint32_t written, uint32_t nframes, float **out) {
   B3S* b3s = (B3S*)instance;
 
@@ -246,13 +248,23 @@ static uint32_t synthSound (B3S *instance, uint32_t written, uint32_t nframes, f
 
     if (b3s->boffset >= BUFFER_SIZE_SAMPLES)  {
       b3s->boffset = 0;
-      oscGenerateFragment (instance->inst->synth, b3s->bufA, BUFFER_SIZE_SAMPLES);
-      preamp (instance->inst->preamp, b3s->bufA, b3s->bufB, BUFFER_SIZE_SAMPLES);
-      reverb (instance->inst->reverb, b3s->bufB, b3s->bufC, BUFFER_SIZE_SAMPLES);
+      oscGenerateFragment (instance->inst->synth, b3s->bufL[0], BUFFER_SIZE_SAMPLES);
+	  memcpy(b3s->bufL[1], b3s->bufL[0], BUFFER_SIZE_SAMPLES * sizeof(b3s->bufL[0][0]));
+	  bool clip = 0;
+	  for(int n = 0; n < BUFFER_SIZE_SAMPLES; ++n){
+	    if(fabsf(b3s->bufL[0][n]) >= 1){
+			clip = 1;
+			break;
+		}
+	  }
+	  if(clip)
+		  rt_printf("Clipping detected\n");
+      //preamp (instance->inst->preamp, b3s->bufA, b3s->bufB, BUFFER_SIZE_SAMPLES);
+      //reverb (instance->inst->reverb, b3s->bufB, b3s->bufC, BUFFER_SIZE_SAMPLES);
 #ifdef WITH_SIGNATURE
       scramble (b3s, b3s->bufC, BUFFER_SIZE_SAMPLES);
 #endif
-      whirlProc3(instance->inst->whirl, b3s->bufC, b3s->bufL[0], b3s->bufL[1], b3s->bufD[0], b3s->bufD[1], BUFFER_SIZE_SAMPLES);
+      //whirlProc3(instance->inst->whirl, b3s->bufC, b3s->bufL[0], b3s->bufL[1], b3s->bufD[0], b3s->bufD[1], BUFFER_SIZE_SAMPLES);
 
     }
 
@@ -347,11 +359,11 @@ static void mcc_cb(const char *fnname, const unsigned char chn, const unsigned c
 void allocSynth(struct b_instance *inst) {
   inst->state = allocRunningConfig();
   inst->progs = allocProgs();
-  inst->reverb = allocReverb();
-  inst->whirl = allocWhirl();
+  //inst->reverb = allocReverb();
+  //inst->whirl = allocWhirl();
   inst->midicfg = allocMidiCfg(inst->state);
   inst->synth = allocTonegen();
-  inst->preamp = allocPreamp();
+  //inst->preamp = allocPreamp();
 
   initControllerTable (inst->midicfg);
 #if 1

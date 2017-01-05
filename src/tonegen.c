@@ -3146,47 +3146,47 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
     if (MSG_GET_MSG(msg) == MSG_MKEYON) {
       keyNumber = MSG_GET_PRM(msg);
       for (lep = t->keyContrib[keyNumber]; lep != NULL; lep = lep->next) {
-	int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
-	osp = &(t->oscillators[wheelNumber]);
+        int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
+        osp = &(t->oscillators[wheelNumber]);
 
-	if (t->aot[wheelNumber].refCount == 0) {
-	  /* Flag the oscillator as added and modified */
-	  osp->rflags = OR_ADD;
-	  /* If not already on the active list, add it */
-	  if (osp->aclPos == -1) {
-	    osp->aclPos = t->activeOscLEnd;
-	    t->activeOscList[t->activeOscLEnd++] = wheelNumber;
-	  }
-	}
-	else {
-	  osp->rflags |= ORF_MODIFIED;
-	}
+        if (t->aot[wheelNumber].refCount == 0) {
+          /* Flag the oscillator as added and modified */
+          osp->rflags = OR_ADD;
+          /* If not already on the active list, add it */
+          if (osp->aclPos == -1) {
+            osp->aclPos = t->activeOscLEnd;
+            t->activeOscList[t->activeOscLEnd++] = wheelNumber;
+          }
+        }
+        else {
+	      osp->rflags |= ORF_MODIFIED;
+        }
 
-	t->aot[wheelNumber].busLevel[LE_BUSNUMBER_OF(lep)] += LE_LEVEL_OF(lep);
-	t->aot[wheelNumber].keyCount[LE_BUSNUMBER_OF(lep)] += 1;
-	t->aot[wheelNumber].refCount += 1;
+        t->aot[wheelNumber].busLevel[LE_BUSNUMBER_OF(lep)] += LE_LEVEL_OF(lep);
+        t->aot[wheelNumber].keyCount[LE_BUSNUMBER_OF(lep)] += 1;
+        t->aot[wheelNumber].refCount += 1;
       }
 
     }
     else if (MSG_GET_MSG(msg) == MSG_MKEYOFF) {
       keyNumber = MSG_GET_PRM(msg);
       for (lep = t->keyContrib[keyNumber]; lep != NULL; lep = lep->next) {
-	int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
-	osp = &(t->oscillators[wheelNumber]);
+        int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
+        osp = &(t->oscillators[wheelNumber]);
 
-	t->aot[wheelNumber].busLevel[LE_BUSNUMBER_OF(lep)] -= LE_LEVEL_OF(lep);
-	t->aot[wheelNumber].keyCount[LE_BUSNUMBER_OF(lep)] -= 1;
-	t->aot[wheelNumber].refCount -= 1;
+        t->aot[wheelNumber].busLevel[LE_BUSNUMBER_OF(lep)] -= LE_LEVEL_OF(lep);
+        t->aot[wheelNumber].keyCount[LE_BUSNUMBER_OF(lep)] -= 1;
+        t->aot[wheelNumber].refCount -= 1;
 
-	assert (0 <= t->aot[wheelNumber].refCount);
-	assert (-1 < osp->aclPos); /* Must be on the active osc list */
+        assert (0 <= t->aot[wheelNumber].refCount);
+        assert (-1 < osp->aclPos); /* Must be on the active osc list */
 
-	if (t->aot[wheelNumber].refCount == 0) {
-	  osp->rflags = OR_REM;
-	}
-	else {
-	  osp->rflags |= ORF_MODIFIED;
-	}
+        if (t->aot[wheelNumber].refCount == 0) {
+          osp->rflags = OR_REM;
+        }
+        else {
+          osp->rflags |= ORF_MODIFIED;
+        }
       }
     }
     else {
@@ -3238,7 +3238,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
       t->coreWriter->nsgain = t->coreWriter->npgain = t->coreWriter->nvgain = 0.0;
 
       if (osp->lengthSamples < (osp->pos + BUFFER_SIZE_SAMPLES)) {
-	/* Need another instruction because of wrap */
+        /* Need another instruction because of wrap */
         CoreIns * prev = t->coreWriter;
         t->coreWriter->cnt = osp->lengthSamples - osp->pos;
         osp->pos = BUFFER_SIZE_SAMPLES - t->coreWriter->cnt;
@@ -3288,7 +3288,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
         float sum = 0.0;
 
         for (d = UPPER_BUS_LO; d < UPPER_BUS_END; d++) {
-	         sum += aop->busLevel[d] * t->drawBarGain[d];
+          sum += aop->busLevel[d] * t->drawBarGain[d];
         }
         aop->sumUpper = sum;
         sum = 0.0;
@@ -3309,7 +3309,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
       if (reroute || recomputeRouting) {
 
         if (t->oldRouting & RT_PERC) { /* Percussion */
-	         aop->sumPercn = aop->busLevel[t->percSendBus];
+          aop->sumPercn = aop->busLevel[t->percSendBus];
         }
         else {
           aop->sumPercn = 0.0;
@@ -3366,7 +3366,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
 
       if (osp->lengthSamples < (osp->pos + BUFFER_SIZE_SAMPLES)) {
-	/* Instruction wraps source buffer */
+        /* Instruction wraps source buffer */
         CoreIns * prev = t->coreWriter; /* Refer to the first instruction */
         t->coreWriter->cnt = osp->lengthSamples - osp->pos; /* Set len count */
         osp->pos = BUFFER_SIZE_SAMPLES - t->coreWriter->cnt; /* Updat src pos */

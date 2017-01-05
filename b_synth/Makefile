@@ -47,11 +47,32 @@ ifeq ($(HAVE_UI), yes)
 	sed "s/@UI_TYPE@/$(UI_TYPE)/;s/@UI_REQ@/$(LV2UIREQ)/;" $(LV2NAME).ui.ttl.in >> $(LV2NAME).ttl
 endif
 
-$(LV2NAME)$(LIB_EXT): lv2.c $(LV2OBJ) uris.h ../src/cfgParser.h ../src/midi.h
+PREBUILT=build/src/midi.o \
+        build/src/cfgParser.o \
+        build/src/program.o \
+        build/src/vibrato.o \
+        build/src/state.o \
+        build/src/tonegen.o \
+        build/src/pgmParser.o \
+        build/src/memstream.o \
+        build/src/midnam.o \
+        build/b_whirl/eqcomp.o\
+        build/b_whirl/whirl.o \
+        build/b_overdrive/overdrive.o \
+        build/b_reverb/reverb.o \
+        build/b_synth/lv2.o
+
+
+build/%.o: ../%.c
+	@mkdir -p $(dir $@ )
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIC_CFLAGS) \
+		-c -MMD -MP -MF"$(@:%.o=%.d)" -o "$@" "$<" 
+
+$(LV2NAME)$(LIB_EXT): uris.h ../src/cfgParser.h ../src/midi.h $(PREBUILT)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIC_CFLAGS) \
 		-o $(LV2NAME)$(LIB_EXT) \
-		lv2.c $(LV2OBJ) \
-	  -shared $(LV2LDFLAGS) $(LDFLAGS) $(LOADLIBES) $(LIC_LOADLIBES)
+		$(PREBUILT) \
+		-shared $(LV2LDFLAGS) $(LDFLAGS) $(LOADLIBES) $(LIC_LOADLIBES)
 
 $(LV2GUI)$(LIB_EXT): ui.c uris.h $(UIDEPS) $(FONTFILE) $(LV2OBJ)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(UICFLAGS) \

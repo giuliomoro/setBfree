@@ -304,14 +304,16 @@
 #define CR_ADD    1		/* Add instruction */
 #define CR_CPYENV 2		/* Copy via envelope instruction */
 #define CR_ADDENV 3		/* Add via envelope instruction */
+#define CR_ADD_INS (CR_ADD & CR_ADDENV)
+#define CR_ENV_INS (CR_CPYENV & CR_ADDENV)
 
 /* Rendering flag bits */
 #define ORF_MODIFIED 0x0004
 #define ORF_ADDED    0x0002
 #define ORF_REMOVED  0x0001
 /* Composite flag bits */
-#define OR_ADD 0x0006
-#define OR_REM 0x0005
+#define OR_ADD (ORF_MODIFIED | ORF_ADDED)
+#define OR_REM (ORF_MODIFIED | ORF_REMOVED)
 
 
 #define RT_PERC2ND 0x08
@@ -3472,8 +3474,8 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
     const float * xp  = t->coreReader->src;
     //printf("CR: %f %f +:%f  (ns:%f)\n", gs, ds, gs+ds, t->coreReader->nsgain );
 
-    if (opr & 1) {		/* ADD and ADDENV */
-      if (opr & 2) {		/* ADDENV */
+    if (opr & CR_ADD_INS) {	/* ADD and ADDENV */
+      if (opr & CR_ENV_INS) { /* ADDENV */
         for (; 0 < n; n--) {
           float x = (float) (*xp++);
           const float e = *ep++;
@@ -3492,8 +3494,8 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
     } else {
 
-      if (opr & 2) {		/* CPY and CPYENV */
-        for (; 0 < n; n--) {	/* CPYENV */
+      if (opr & CR_ENV_INS) { /* CPY and CPYENV */
+        for (; 0 < n; n--) { /* CPYENV */
           const float x = (float) (*xp++);
           const float e =  *ep++;
           *ys++ = x * (gs + (e * ds));

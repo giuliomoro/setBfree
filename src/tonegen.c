@@ -2595,13 +2595,13 @@ static void initEnvelopes (struct b_tonegen *t) {
       for (i = 0; i < start; i++) t->attackEnv[b][i] = 0.0;
       /* In the burst area the amplification is random. */
       for (; i < (start + burst); i++) {
-        t->attackEnv[b][i] = 1.0 - (t->envAttackClickLevel * drnd ());
+        t->attackEnv[b][i] = (1.0 - (t->envAttackClickLevel * drnd ())) > 0.5;
       }
       /* From the end of the burst to the end of the envelope the
 	 amplification is unity. */
       for (; i < bss; i++) t->attackEnv[b][i] = 1.0;
 
-#if 1
+#if 0
       /* 2002-08-31/FK EXPERIMENTAL */
       /* Two-point average low-pass filter. */
       {

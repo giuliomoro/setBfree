@@ -268,7 +268,7 @@ CoreIns * coreReader;
 
 /* Attack and release buffer envelopes for 9 buses. */
 #define NUM_ENVELOPES 9
-#define ENVELOPE_LENGTH ((16384 / BUFFER_SIZE_SAMPLES ) * BUFFER_SIZE_SAMPLES)
+#define ENVELOPE_LENGTH ((1024 / BUFFER_SIZE_SAMPLES ) * BUFFER_SIZE_SAMPLES)
 float attackEnv[NUM_ENVELOPES][ENVELOPE_LENGTH]; /**< Attack envelope buffer for 9 buses */
 float* attackEnvEnd[NUM_ENVELOPES];
 float releaseEnv[NUM_ENVELOPES][ENVELOPE_LENGTH];/**< Release envelope buffer for 9 buses */

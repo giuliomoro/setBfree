@@ -13,6 +13,7 @@ TX=textures/
 
 ifeq ($(LV2AVAIL), yes)
   targets+=lv2
+  CFLAGS+= -DJACK_DESCRIPT
   ifeq ($(HAVE_UI), yes)
     targets+=$(LV2GUI)$(LIB_EXT)
   else
@@ -63,7 +64,7 @@ PREBUILT=build/src/midi.o \
         build/b_synth/lv2.o
 
 
-build/%.o: ../%.c
+build/%.o: ../%.c ../src/tonegen.h
 	@mkdir -p $(dir $@ )
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIC_CFLAGS) \
 		-c -MMD -MP -MF"$(@:%.o=%.d)" -o "$@" "$<" 

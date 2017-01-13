@@ -3335,7 +3335,11 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
           sumPedal += aop->busLevel[d] * t->drawBarGain[d];
         }
         reroute = 1;
-      }
+      } else {
+        sumUpper = aop->sumUpper;
+		sumLower = aop->sumLower;
+		sumPedal = aop->sumPedal;
+	  }
 
       /* If the group mix or routing has changed */
 

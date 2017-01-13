@@ -3230,18 +3230,10 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
    * and removed oscillators are still on the list.
    */
   for (i = 0; i < t->activeOscLEnd; i++) {
-      int log = 0;
-      if(i == 0) log = 0;
 
     int oscNumber = t->activeOscList[i]; /* Get the oscillator number */
     AOTElement * aop = &(t->aot[oscNumber]); /* Get a pointer to active struct */
     osp = &(t->oscillators[oscNumber]); /* Point to the oscillator */
-    if(log) rt_printf(">>>>\n");
-    if(log) rt_printf("sumUpper: %.3f, sumLower: %.3f, sumPedal: %.3f\n",
-      aop->sumUpper, aop->sumLower, aop->sumPedal);
-    if(log) rt_printf("sumSwell: %.3f, sumScanr: %.3f, sumPercn: %.3f\n",
-      aop->sumSwell, aop->sumScanr, aop->sumPercn);
-	if(log) rt_printf("rflags: %#x\n", osp->rflags);
 
     if (osp->rflags & ORF_REMOVED) {/* Decay instruction for removed osc. */
       /* Put it on the removal list */
@@ -3253,7 +3245,6 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 			/* All envelopes, both attack and release must traverse 0-1. */
 
       t->coreWriter->env = t->releaseEnv[i & 7];
-	  rt_printf("Release envelope\n");
 
       if (copyDone) {
         t->coreWriter->opr = CR_ADDENV;
@@ -3306,11 +3297,9 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
        * used. For modified oscillators we provide the update below.
        */
       if (osp->rflags & ORF_ADDED) {
-        if(log) rt_printf("ORF_ADDED\n");
         t->coreWriter->sgain = t->coreWriter->pgain = t->coreWriter->vgain = 0.0;
       }
       else { /* ORF_MODIFIED */
-        if(log) rt_printf("ORF_MODIFIED or not\n");
         t->coreWriter->sgain = aop->sumSwell;
         t->coreWriter->pgain = aop->sumPercn;
         t->coreWriter->vgain = aop->sumScanr;
@@ -3322,7 +3311,6 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
       float sumLower = 0.0;
       float sumPedal = 0.0;
       if ((osp->rflags & (ORF_MODIFIED | ORF_PERSISTED)) || t->drawBarChange) {
-	  if(log) rt_printf("do drawbarchange\n");
         int d;
 
         for (d = UPPER_BUS_LO; d < UPPER_BUS_END; d++) {
@@ -3347,12 +3335,8 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 	  float sumSwell;
 	  float sumScanr;
 	  int doRecomputeRouting = reroute || recomputeRouting;
-	  // TODO:handle recomputeRouting separately: currently it is probably mislead
-	  // by the fact that it uses the old settings
 
     if (doRecomputeRouting) {
-	  if(log) rt_printf("do recomputerouting\n");
-
       if (t->oldRouting & RT_PERC) { /* Percussion */
         sumPercn = aop->busLevel[t->percSendBus];
       }
@@ -3393,7 +3377,6 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
         env = osp->env;
         if (env == NULL) { // the envelope is not init'd
           env = t->attackEnv[i & 7]; // pick one envelope
-		  rt_printf("Start attack\n");
           osp->envEnd = env + ENVELOPE_LENGTH;
           osp->rflags |= ORF_PERSISTED;
         }
@@ -3405,18 +3388,14 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
           if (remaining <= 0) { // the envelope is completed
             envelopeCompleted = 1; 
             osp->env = NULL; // deactivate it
-			if(log) rt_printf("clearin persistency: %#x\n", osp->rflags);
             osp->rflags &= ~ORF_PERSISTED; // forget about it
-			if(log) rt_printf("cleared persistency: %#x\n", osp->rflags);
           }
           else { //remember current envelope
-            //if(log == 1) rt_printf("non completed: %d remaining\n", remaining);
             osp->env = env;
           }
         }
 #else
         env = t->attackEnv[i & 7];
-		rt_printf("Start attack\n");
 #endif /* LONG_ENVELOPES */
 
         /* Envelope attack instruction */
@@ -3447,15 +3426,9 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
           copyDone = 1;
         }
       }
-      if(log) rt_printf("sgain: %.3f, nsgain: %.3f\n",
-        t->coreWriter->sgain,
-        t->coreWriter->nsgain
-        );
 
 #ifdef LONG_ENVELOPES
       if (envelopeCompleted || !(osp->rflags & ORF_PERSISTED)) { // the envelope is completed, store the values
-        if(log) rt_printf("stored the values\n");
-        if(log && envelopeCompleted) rt_printf("--------------------------------------------------------\n");
 #endif /* LONG_ENVELOPES */
         aop->sumUpper = sumUpper;
         aop->sumLower = sumLower;
@@ -3508,13 +3481,8 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
     } /* else aot element not removed, ie modified or added */
 
-    if(log) rt_printf("sumUpper: %.3f, sumLower: %.3f, sumPedal: %.3f\n",
-      aop->sumUpper, aop->sumLower, aop->sumPedal);
-    if(log) rt_printf("sumSwell: %.3f, sumScanr: %.3f, sumPercn: %.3f\n",
-      aop->sumSwell, aop->sumScanr, aop->sumPercn);
     /* Clear rendering flags, excluding persistency */
     osp->rflags &= CLEAR_RFLAGS_MASK;
-    if(log) rt_printf("<<<<\n");
 
   } /* for the active list */
 

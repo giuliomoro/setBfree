@@ -268,6 +268,10 @@ CoreIns * coreReader;
 
 /* Attack and release buffer envelopes for 9 buses. */
 #define NUM_ENVELOPES 9
+     /*
+	  * The oscGenerateFragment() routine assumes that envelopes are a
+	  * multiple of BUFFER_SIZE_SAMPLES long
+	  */
 #define ENVELOPE_LENGTH ((1024 / BUFFER_SIZE_SAMPLES ) * BUFFER_SIZE_SAMPLES)
 float attackEnv[NUM_ENVELOPES][ENVELOPE_LENGTH]; /**< Attack envelope buffer for 9 buses */
 float* attackEnvEnd[NUM_ENVELOPES];

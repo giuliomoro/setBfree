@@ -23,7 +23,6 @@
  */
 #ifndef TONEGEN_H
 #define TONEGEN_H
-
 #ifndef M_PI
 # define M_PI		3.14159265358979323846	/* pi */
 #endif
@@ -83,6 +82,14 @@ typedef struct deflist_element {
  */
 #define MAX_KEYS 160
 
+//#undef LONG_ENVELOPES
+#define LONG_ENVELOPES
+#ifdef LONG_ENVELOPES
+typedef struct pers_message {
+  
+} PersMessage;
+#endif /* LONG_ENVELOPES */
+
 /**
  * Active oscillator table element.
  */
@@ -133,6 +140,11 @@ struct _oscillator {
   double  frequency;		/**< The frequency (Hertz) */
   double  attenuation;		/**< Signal level (0.0 -- 1.0) */
   size_t  pos;			/**< Read position */
+
+#ifdef LONG_ENVELOPES
+  float* env;
+  float* envEnd;
+#endif /* LONG_ENVELOPES */
 
   int     aclPos;		/**< Position in active list */
   unsigned short rflags;	/**< Rendering flags */
@@ -208,6 +220,14 @@ unsigned short * msgQueueWriter; /**< message-queue srite pointer */
 unsigned short * msgQueueReader; /**< message-queue read pointer */
 unsigned short * msgQueueEnd;
 
+#ifdef LONG_ENVELOPES
+#define PERQSZ 1024 // should actually be the total number of contacts
+PersMessage   persQueue [PERQSZ];
+PersMessage * persQueueWriter;
+PersMessage * persQueueReader;
+PersMessage * persQueueEnd;
+#endif /* LONG_ENVELOPES */
+
 /*
  * When HIPASS_PERCUSSION is defined it will do two things:
  *  - Insert a high-pass filter in the percussion signal
@@ -246,9 +266,15 @@ CoreIns * coreWriter;
 CoreIns * coreReader;
 
 /* Attack and release buffer envelopes for 9 buses. */
-
-float attackEnv[9][BUFFER_SIZE_SAMPLES]; /**< Attack envelope buffer for 9 buses */
-float releaseEnv[9][BUFFER_SIZE_SAMPLES];/**< Release envelope buffer for 9 buses */
+#define NUM_ENVELOPES 9
+     /*
+	  * The oscGenerateFragment() routine assumes that envelopes are a
+	  * multiple of BUFFER_SIZE_SAMPLES long
+	  */
+#define ENVELOPE_LENGTH ((1024 / BUFFER_SIZE_SAMPLES ) * BUFFER_SIZE_SAMPLES)
+float attackEnv[NUM_ENVELOPES][ENVELOPE_LENGTH]; /**< Attack envelope buffer for 9 buses */
+float* attackEnvEnd[NUM_ENVELOPES];
+float releaseEnv[NUM_ENVELOPES][ENVELOPE_LENGTH];/**< Release envelope buffer for 9 buses */
 
 
 int envAttackModel;

@@ -3574,7 +3574,6 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
     } else {
 
       if (opr & CR_ENV_INS) { /* CPY and CPYENV */
-        //rt_printf("CPYENV: gs: %.3f, e: %.3f, ds: %.3f\n", gs, *ep, ds);
         for (; 0 < n; n--) { /* CPYENV */
           const float x = (float) (*xp++);
           const float e =  *ep++;

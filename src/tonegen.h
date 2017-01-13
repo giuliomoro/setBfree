@@ -23,7 +23,6 @@
  */
 #ifndef TONEGEN_H
 #define TONEGEN_H
-int rt_printf(const char *format, ...);
 #ifndef M_PI
 # define M_PI		3.14159265358979323846	/* pi */
 #endif

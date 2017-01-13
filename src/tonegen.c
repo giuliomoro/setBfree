@@ -2874,11 +2874,9 @@ void initToneGenerator (struct b_tonegen *t, void *m) {
 
   if (t->envAtkClkMinLength<0) {
     t->envAtkClkMinLength = floor(SampleRateD * (ENVELOPE_LENGTH * 0.1f) / 22050.0);
-    printf("min: %d\n", t->envAtkClkMinLength);
   }
   if (t->envAtkClkMaxLength<0) {
     t->envAtkClkMaxLength = ceil(SampleRateD * (ENVELOPE_LENGTH * 0.9f) / 22050.0);
-    printf("max: %d\n", t->envAtkClkMaxLength);
   }
 
   if (t->envAtkClkMinLength > ENVELOPE_LENGTH) {

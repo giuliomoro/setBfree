@@ -3,7 +3,7 @@ include ../common.mak
 include ../git2lv2.mk
 
 LOADLIBES = -lm
-override CFLAGS+= -I../src -I../b_overdrive -I../b_reverb -I../b_whirl
+override CFLAGS+= -I../src -I../b_overdrive -I../b_reverb -I../b_whirl -DJACK_DESCRIPT
 override CFLAGS+=`pkg-config --cflags lv2` -DLV2SYNTH -fvisibility=hidden
 targets=
 
@@ -64,7 +64,7 @@ PREBUILT=build/src/midi.o \
         build/b_synth/lv2.o
 
 
-build/%.o: ../%.c ../src/tonegen.h
+build/%.o: ../%.c ../src/tonegen.h ../src/contacts.h
 	@mkdir -p $(dir $@ )
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIC_CFLAGS) \
 		-c -MMD -MP -MF"$(@:%.o=%.d)" -o "$@" "$<" 

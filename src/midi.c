@@ -37,6 +37,7 @@
 #include "program.h"
 #include "state.h"
 #include "global_inst.h"
+#include "contacts.h"
 
 /*
  * Symbolic names for functions that can be governed by MIDI controllers.
@@ -1118,35 +1119,63 @@ void midi_panic (void *inst) {
   for (i=0; i < MAX_KEYS; ++i) {
     oscKeyOff (instp->synth, i, i);
   }
+  for (i = 0; i < MAX_CONTACTS; ++i) {
+    oscContactOff(instp->synth, i);
+  }
 }
 
 void process_midi_event(void *instp, const struct bmidi_event_t *ev) {
   struct b_instance * inst = (struct b_instance *) instp;
   struct b_midicfg * m = (struct b_midicfg *) inst->midicfg;
+  short key = map_to_real_key(m, ev->channel, ev->d.tone.note);
+  short bus;
+  static int numContacts = 1;
   switch(ev->type) {
     case NOTE_ON:
-      if(m->keyTable[ev->channel] && m->keyTable[ev->channel][ev->d.tone.note] != 255) {
-	if (ev->d.tone.velocity > 0){
-	  oscKeyOn (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],
-	      map_to_real_key(m, ev->channel, ev->d.tone.note)
-	      );
-	} else {
-	  oscKeyOff (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],
-	      map_to_real_key(m, ev->channel, ev->d.tone.note)
-	      );
-	}
+      for(unsigned int n = 0; n < numContacts; ++n){
+        bus = n;
+        int contact = make_contact(bus, key);
+        //rt_printf("bus: %d, key: %d\n", get_contact_bus(contact), get_contact_key(contact));
+        if(m->keyTable[ev->channel] && m->keyTable[ev->channel][ev->d.tone.note] != 255) {
+          if (ev->d.tone.velocity > 0){
+	          //oscKeyOn (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],
+	              //map_to_real_key(m, ev->channel, ev->d.tone.note)
+            //);
+            oscContactOn(inst->synth, contact);
+          } else {
+	          //oscKeyOff (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],
+	              //map_to_real_key(m, ev->channel, ev->d.tone.note)
+           //);
+            oscContactOff(inst->synth, contact);
+          }
+        }
       }
       break;
     case NOTE_OFF:
-      if(m->keyTable[ev->channel] && m->keyTable[ev->channel][ev->d.tone.note] != 255)
-	oscKeyOff (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],
-	    map_to_real_key(m, ev->channel, ev->d.tone.note)
-	    );
+      for(unsigned int n = 0; n < numContacts; ++n){
+        int bus = n;
+        int contact = make_contact(bus, key);
+        if(m->keyTable[ev->channel] && m->keyTable[ev->channel][ev->d.tone.note] != 255)
+	//os  cKeyOff (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],
+	      //map_to_real_key(m, ev->channel, ev->d.tone.note)
+	      //);
+        oscContactOff(inst->synth, contact);
+      }
       break;
     case PROGRAM_CHANGE:
       installProgram(inst, ev->d.control.value);
       break;
     case CONTROL_CHANGE:
+      //ev->channel;
+      {
+        unsigned char cc = ev->d.control.param;
+        unsigned short val = ev->d.control.value;
+        if(cc == 1){
+          numContacts = val / 15 + 1;
+          printf("numContacts: %d\n", numContacts);
+          break;
+        }
+      }
 #ifdef DEBUG_MIDI_CC
       {
 	unsigned char * ctrlUse = NULL;
@@ -1174,23 +1203,23 @@ void process_midi_event(void *instp, const struct bmidi_event_t *ev) {
 
       /*  0x00 and 0x20 are used for BANK select */
       if (ev->d.control.param == 0x00 || ev->d.control.param == 0x20) {
-	break;
+        break;
       } else
 
       if (ev->d.control.param == 121) {
-	/* TODO - reset all controller */
-	break;
+        /* TODO - reset all controller */
+        break;
       } else
 
       if (ev->d.control.param == 120 || ev->d.control.param == 123) {
-	/* Midi panic: 120: all sound off, 123: all notes off*/
-	midi_panic(instp);
-	break;
+        /* Midi panic: 120: all sound off, 123: all notes off*/
+        midi_panic(instp);
+        break;
       } else
 
       if (ev->d.control.param >= 120) {
 	/* params 122-127 are reserved - skip them. */
-	break;
+        break;
       } else {
 	/* auto assign function from midi-controller */
 	if (m->ccuimap >= 0) {

@@ -23,6 +23,10 @@
  */
 #ifndef TONEGEN_H
 #define TONEGEN_H
+#include <stdbool.h>
+#define DEBUG_TONEGEN_OSC 1
+int rt_printf(const char *format, ...);
+
 #ifndef M_PI
 # define M_PI		3.14159265358979323846	/* pi */
 #endif
@@ -81,6 +85,11 @@ typedef struct deflist_element {
  * 128--160, pedal        (128--159 in use)
  */
 #define MAX_KEYS 160
+
+#define INDIVIDUAL_CONTACTS
+#ifdef INDIVIDUAL_CONTACTS
+#include "contacts.h"
+#endif /* INDIVIDUAL_CONTACTS */
 
 //#undef LONG_ENVELOPES
 #define LONG_ENVELOPES
@@ -248,6 +257,9 @@ PersMessage * persQueueEnd;
 #define MAXKEYS 128
 float keyCompTable[MAXKEYS];
 int   keyDownCount;
+#ifdef INDIVIDUAL_CONTACTS
+int   contactDownCount;
+#endif /* INDIVIDUAL_CONTACTS */
 #define KEYCOMP_ZERO_LEVEL 1.0
 #endif /* KEYCOMPRESSION */
 
@@ -337,12 +349,20 @@ unsigned int activeKeys [MAX_KEYS];
  */
 unsigned int _activeKeys [MAX_KEYS/32];
 
-/**
+#ifdef INDIVIDUAL_CONTACTS
+/*
+ * Vector of active contacts, used to correctly manage
+ * sounding and non-sounding tones.
+ * boolean 0,1
+ */
+bool activeContacts [MAX_CONTACTS];
+#endif /* INDIVIDUAL_CONTACTS */
+
+/*
  * The array drawBarGain holds the instantaneous amplification value for
  * each of the drawbars.
  */
 float drawBarGain[NOF_BUSES];
-
 /**
  * The drawBarLevel table holds the possible drawbar amplification values
  * for all drawbars and settings. When a drawbar change is applied, the
@@ -604,6 +624,10 @@ extern const ConfigDoc *oscDoc ();
 extern void initToneGenerator (struct b_tonegen *t, void *m);
 extern void freeToneGenerator (struct b_tonegen *t);
 
+#ifdef INDIVIDUAL_CONTACTS
+extern void oscContactOff (struct b_tonegen *t, unsigned short midiNote);
+extern void oscContactOn (struct b_tonegen *t, unsigned short midiNote);
+#endif /* INDIVIDUAL_CONTACTS */
 extern void oscKeyOff (struct b_tonegen *t, unsigned char midiNote, unsigned char realKey);
 extern void oscKeyOn (struct b_tonegen *t, unsigned char midiNote, unsigned char realKey);
 extern void setDrawBars (void *inst, unsigned int manual, unsigned int setting []);

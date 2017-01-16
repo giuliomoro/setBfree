@@ -297,6 +297,15 @@
 /* Key depressed message, arg is keynumber */
 #define MSG_KEY_ON(K)  (MSG_MKEYON  | ((K) & MSG_PMASK))
 
+#ifdef INDIVIDUAL_CONTACTS
+#define MSG_MCONTACTOFF  0x2000
+#define MSG_MCONTACTON  0x3000
+/* Contact closed message, arg is contactnumber */
+#define MSG_CONTACT_OFF(K)  (MSG_MCONTACTOFF  | ((K) & MSG_PMASK))
+/* Contact open message, arg is contactnumber */
+#define MSG_CONTACT_ON(K)  (MSG_MCONTACTON  | ((K) & MSG_PMASK))
+#endif /* INDIVIDUAL_CONTACTS */
+
 
 /* Core instruction codes (opr field in struct _coreins). */
 
@@ -384,6 +393,9 @@ static void initValues (struct b_tonegen *t) {
 
 #ifdef KEYCOMPRESSION
   t->keyDownCount = 0;
+#ifdef INDIVIDUAL_CONTACTS
+  t->contactDownCount = 0;
+#endif /* INDIVIDUAL_CONTACTS */
 #endif
 
   t->swellPedalGain = 0.07; // initial level
@@ -2219,7 +2231,7 @@ static int dumpOscToText (struct b_tonegen *t, char * fname) {
 	   "Sampl",
 	   "Bytes",
 	   "Gain");
-  for (i = 0; i < 128; i++) {
+  for (i = 0; i < NOF_WHEELS + 1; i++) {
     fprintf (fp, "[%3d]:%7.2lf Hz:%5zu:%6zu:%5.2lf\n",
 	     i,
 	     t->oscillators[i].frequency,
@@ -3066,6 +3078,56 @@ void oscKeyOn (struct b_tonegen *t, unsigned char keyNumber, unsigned char realK
 
 }
 
+#ifdef INDIVIDUAL_CONTACTS
+void oscContactOff (struct b_tonegen *t, unsigned short contactNumber) {
+  if (MAX_CONTACTS <= contactNumber) return;
+  /* The key must be marked as on */
+  if (t->activeContacts[contactNumber] != 0) {
+    /* Flag the contact as inactive */
+    t->activeContacts[contactNumber] = 0;
+    /* TODO" handle percussion: count active contacts on percussion bus */
+#ifdef KEYCOMPRESSION
+     t->contactDownCount--;
+     assert (0 <= t->contactDownCount);
+#endif /* KEYCOMPRESSION */
+     /* Write message saying that the key is released */
+     *t->msgQueueWriter++ = MSG_CONTACT_OFF(contactNumber);
+     /* Check for wrap on message queue */
+     if (t->msgQueueWriter == t->msgQueueEnd) {
+       t->msgQueueWriter = t->msgQueue;
+     }
+  } /* if contact was active */
+}
+/**
+ * This function is the entry point for the MIDI parser when it has received
+ * a CONTACT ON message on a channel and note number mapped to a playing key.
+ */
+void oscContactOn (struct b_tonegen *t, unsigned short contactNumber) {
+  rt_printf("contactNumber: %d\n");
+  if (MAX_CONTACTS <= contactNumber) return;
+  /* If the contact is already depressed, release it first. */
+  if (t->activeContacts[contactNumber] != 0) {
+    printf("NoteOFF\n");
+    oscContactOff (t, contactNumber);
+  }
+  /* Mark the contact as active */
+  t->activeContacts[contactNumber] = 1;
+  /* TODO" handle percussion: count active contacts on percussion bus */
+
+#ifdef KEYCOMPRESSION
+  t->contactDownCount++;
+#endif /* KEYCOMPRESSION */
+  /* Write message */
+  *t->msgQueueWriter++ = MSG_CONTACT_ON(contactNumber);
+  /* Check for wrap on message queue */
+  if (t->msgQueueWriter == t->msgQueueEnd) {
+    t->msgQueueWriter = t->msgQueue;
+  }
+  /*  printf ("\rON :%3d", keyNumber); fflush (stdout); */
+
+}
+#endif /* INDIVIDUAL_CONTACTS */
+
 /* ----------------------------------------------------------------
  * Tonegenerator version 3, 16-jul-2004
  * ----------------------------------------------------------------*/
@@ -3163,7 +3225,62 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
       t->msgQueueReader = t->msgQueue;
     }
 
-    if (MSG_GET_MSG(msg) == MSG_MKEYON) {
+    if (MSG_GET_MSG(msg) == MSG_MCONTACTON) {
+      int contactNumber = MSG_GET_PRM(msg);
+      int busNumber = get_contact_bus(contactNumber);
+      int keyNumber = get_contact_key(contactNumber);
+      rt_printf("bus: %d, key: %d\n", get_contact_bus(contactNumber), get_contact_key(contactNumber));
+      for (lep = t->keyContrib[keyNumber]; lep != NULL; lep = lep->next) {
+        if(LE_BUSNUMBER_OF(lep) != busNumber)
+          continue;
+        int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
+        osp = &(t->oscillators[wheelNumber]);
+
+        if (t->aot[wheelNumber].refCount == 0) {
+          /* Flag the oscillator as added and modified */
+          osp->rflags = OR_ADD;
+          /* If not already on the active list, add it */
+          if (osp->aclPos == -1) {
+            osp->aclPos = t->activeOscLEnd;
+            t->activeOscList[t->activeOscLEnd++] = wheelNumber;
+          }
+        }
+        else {
+          osp->rflags |= ORF_MODIFIED;
+        }
+
+        t->aot[wheelNumber].busLevel[LE_BUSNUMBER_OF(lep)] += LE_LEVEL_OF(lep);
+        t->aot[wheelNumber].keyCount[LE_BUSNUMBER_OF(lep)] += 1;
+        t->aot[wheelNumber].refCount += 1;
+        //rt_printf("wheelNumber: %d, busLevel[%d]: %.8f\n", wheelNumber, LE_BUSNUMBER_OF(lep), t->aot[wheelNumber].busLevel[LE_BUSNUMBER_OF(lep)]);
+      }
+    }
+    else if (MSG_GET_MSG(msg) == MSG_MCONTACTOFF) {
+      int contactNumber = MSG_GET_PRM(msg);
+      int busNumber = get_contact_bus(contactNumber);
+      int keyNumber = get_contact_key(contactNumber);
+      for (lep = t->keyContrib[keyNumber]; lep != NULL; lep = lep->next) {
+        if(LE_BUSNUMBER_OF(lep) != busNumber)
+          continue;
+        int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
+        osp = &(t->oscillators[wheelNumber]);
+
+        t->aot[wheelNumber].busLevel[LE_BUSNUMBER_OF(lep)] -= LE_LEVEL_OF(lep);
+        t->aot[wheelNumber].keyCount[LE_BUSNUMBER_OF(lep)] -= 1;
+        t->aot[wheelNumber].refCount -= 1;
+
+        assert (0 <= t->aot[wheelNumber].refCount);
+        assert (-1 < osp->aclPos); /* Must be on the active osc list */
+
+        if (t->aot[wheelNumber].refCount == 0) {
+          osp->rflags = OR_REM;
+        }
+        else {
+          osp->rflags |= ORF_MODIFIED;
+        }
+      }
+    }
+    else if (MSG_GET_MSG(msg) == MSG_MKEYON) {
       keyNumber = MSG_GET_PRM(msg);
       for (lep = t->keyContrib[keyNumber]; lep != NULL; lep = lep->next) {
         int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
@@ -3179,12 +3296,13 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
           }
         }
         else {
-	      osp->rflags |= ORF_MODIFIED;
+          osp->rflags |= ORF_MODIFIED;
         }
 
         t->aot[wheelNumber].busLevel[LE_BUSNUMBER_OF(lep)] += LE_LEVEL_OF(lep);
         t->aot[wheelNumber].keyCount[LE_BUSNUMBER_OF(lep)] += 1;
         t->aot[wheelNumber].refCount += 1;
+        //rt_printf("wheelNumber: %d, busLevel[%d]: %.8f\n", wheelNumber, LE_BUSNUMBER_OF(lep), t->aot[wheelNumber].busLevel[LE_BUSNUMBER_OF(lep)]);
       }
 
     }

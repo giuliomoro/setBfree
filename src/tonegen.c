@@ -358,6 +358,8 @@
 #define taperPlusOne      3.5
 #define taperPlusTwo      7.0
 
+#include <Keys_c.h>
+#include <BoardsTopology_c.h>
 
 static void initValues (struct b_tonegen *t) {
   t->leConfig = NULL;
@@ -3080,6 +3082,7 @@ void oscKeyOn (struct b_tonegen *t, unsigned char keyNumber, unsigned char realK
 
 #ifdef INDIVIDUAL_CONTACTS
 void oscContactOff (struct b_tonegen *t, unsigned short contactNumber) {
+  rt_printf("contactOff: %d\n", contactNumber);
   if (MAX_CONTACTS <= contactNumber) return;
   /* The key must be marked as on */
   if (t->activeContacts[contactNumber] != 0) {
@@ -3103,11 +3106,11 @@ void oscContactOff (struct b_tonegen *t, unsigned short contactNumber) {
  * a CONTACT ON message on a channel and note number mapped to a playing key.
  */
 void oscContactOn (struct b_tonegen *t, unsigned short contactNumber) {
-  rt_printf("contactNumber: %d\n");
+  rt_printf("contactOn: %d\n", contactNumber);
   if (MAX_CONTACTS <= contactNumber) return;
   /* If the contact is already depressed, release it first. */
   if (t->activeContacts[contactNumber] != 0) {
-    printf("NoteOFF\n");
+    rt_printf("NoteOFF\n");
     oscContactOff (t, contactNumber);
   }
   /* Mark the contact as active */
@@ -3179,6 +3182,73 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber) {
  * slow. Sequencers, however, may put some strain on things.
  */
 void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples) {
+  
+  static Keys* keys;
+  static BoardsTopology* bt;
+  static int init = 0;
+  static float pos[96];
+  static float oldPos[96];
+  static float thr[9] = {
+    0.3,
+    0.35,
+    0.5,
+    0.55,
+    0.6,
+    0.65,
+    0.7,
+    0.75,
+    0.8
+  };
+  if(init == 0)
+  {
+    init = 1;
+	bt = BoardsTopology_new();
+	keys = Keys_new();
+    BoardsTopology_setLowestNote(bt, 36);
+    BoardsTopology_setBoard(bt, 0, 0, 24);
+    BoardsTopology_setBoard(bt, 1, 0, 23);
+    BoardsTopology_setBoard(bt, 2, 12, 23);
+    int ret = Keys_start(keys, bt, NULL);
+	if(ret < 0)
+	{
+		printf("Error: %d\n", ret);
+		exit(1);
+	}
+  } 
+  else
+  {
+    for(int n = 0; n < 61; ++n){
+      pos[n] = Keys_getNoteValue(keys, n + 36);
+    }
+    for(int n = 0; n < 61; ++n){
+      for(int bus = 0; bus < 9; ++bus)
+      {
+        float threshold = thr[bus];
+        if(pos[n] >= threshold && oldPos[n] < threshold)
+        { // contact was inactive, we need to turn it on
+          int contact = make_contact(bus, n);
+          oscContactOn(t, contact);
+        }
+        else if(pos[n] < threshold && oldPos[n] >= threshold)
+        { // contact was active, we need to turn it off
+          int contact = make_contact(bus, n);
+          oscContactOff(t, contact);
+        }
+      }
+	}
+    for(int n = 0; n < 61; ++n){
+	  oldPos[n] = pos[n];
+	}
+  }
+	static int count = 0;
+	if(count % 70 == 0)
+	{
+		for(int n = 0; n < 61; ++n)
+			rt_printf("%1d ", (int)(pos[n]*10));
+		rt_printf("\n");
+	}
+	count++;
+
 
   int i;
   float * yptr = buf;
@@ -3790,6 +3860,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
   if (t->upperKeyCount == 0) {
     t->percEnvGain = t->percEnvGainReset;
   }
+
 } /* oscGenerateFragment */
 
 

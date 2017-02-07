@@ -359,7 +359,6 @@
 #define taperPlusTwo      7.0
 
 #include <Keys_c.h>
-#include <BoardsTopology_c.h>
 
 static void initValues (struct b_tonegen *t) {
   t->leConfig = NULL;
@@ -3263,8 +3262,12 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
   float * const prcBuffer = t->prcBuffer;
 
 #ifdef KEYCOMPRESSION
+#ifdef INDIVIDUAL_CONTACTS
+  const float keyComp = t->keyCompTable[t->contactDownCount / (2 * NOF_BUSES)];
+#else
   const float keyComp = t->keyCompTable[t->keyDownCount];
-  const float keyCompDelta = (keyComp - t->keyCompLevel) / (float) BUFFER_SIZE_SAMPLES;
+#endif /* INDIVIDUAL_CONTACTS */
+  const float keyCompDelta = (keyComp - t->keyCompLevel) / (float) BUFFER_SIZE_SAMPLES; 
 #define KEYCOMPCHASE() {t->keyCompLevel += keyCompDelta;}
 #define KEYCOMPLEVEL (t->keyCompLevel)
 

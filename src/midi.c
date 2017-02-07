@@ -1129,7 +1129,7 @@ void process_midi_event(void *instp, const struct bmidi_event_t *ev) {
   struct b_midicfg * m = (struct b_midicfg *) inst->midicfg;
   short key = map_to_real_key(m, ev->channel, ev->d.tone.note);
   short bus;
-  static int numContacts = 1;
+  static int numContacts = 9;
   switch(ev->type) {
     case NOTE_ON:
       for(unsigned int n = 0; n < numContacts; ++n){
@@ -1170,11 +1170,9 @@ void process_midi_event(void *instp, const struct bmidi_event_t *ev) {
       {
         unsigned char cc = ev->d.control.param;
         unsigned short val = ev->d.control.value;
-        if(cc == 1){
-          numContacts = val / 15 + 1;
-          printf("numContacts: %d\n", numContacts);
-          break;
-        }
+        //if(cc == 1){
+          ////break;
+        ////}
       }
 #ifdef DEBUG_MIDI_CC
       {

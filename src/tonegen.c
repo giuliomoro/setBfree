@@ -3213,6 +3213,8 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 		printf("Error: %d\n", ret);
 		exit(1);
 	}
+	Keys_startTopCalibration(keys);
+	Keys_loadCalibrationFile(keys, "/root/spi-pru/out.txt");
   } 
   else
   {
@@ -3223,12 +3225,12 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
       for(int bus = 0; bus < 9; ++bus)
       {
         float threshold = thr[bus];
-        if(pos[n] >= threshold && oldPos[n] < threshold)
+        if(pos[n] <= threshold && oldPos[n] > threshold)
         { // contact was inactive, we need to turn it on
           int contact = make_contact(bus, n);
           oscContactOn(t, contact);
         }
-        else if(pos[n] < threshold && oldPos[n] >= threshold)
+        else if(pos[n] > threshold && oldPos[n] <= threshold)
         { // contact was active, we need to turn it off
           int contact = make_contact(bus, n);
           oscContactOff(t, contact);

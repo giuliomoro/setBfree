@@ -162,6 +162,8 @@ static const char * ccFuncNames[] = {
 
   "convolution.mix",
 
+  "volume.mute",
+
   NULL
 };
 
@@ -857,6 +859,7 @@ void midiPrimeControllerMapping (void *mcfg) {
   loadCCMap (m, "whirl.horn.filter.a.hz",   28, m->ctrlUseA, NULL, NULL);
   loadCCMap (m, "whirl.horn.filter.a.q",    29, m->ctrlUseA, NULL, NULL);
   loadCCMap (m, "whirl.horn.filter.a.gain", 30, m->ctrlUseA, NULL, NULL);
+  loadCCMap (m, "volume.mute", 31, m->ctrlUseA, m->ctrlUseB, m->ctrlUseC);
 
   /* 32-63 are least significant bits of controller 0-31 */
 
@@ -916,6 +919,7 @@ void midiPrimeControllerMapping (void *mcfg) {
 
   loadCCMap (m, "overdrive.character",   93, m->ctrlUseA, NULL, NULL);
 
+  loadCCMap (m, "convolution.mix", 94, m->ctrlUseA, NULL, NULL);
   loadCCMap (m, "convolution.mix", 94, m->ctrlUseA, NULL, NULL);
 }
 
@@ -1166,14 +1170,6 @@ void process_midi_event(void *instp, const struct bmidi_event_t *ev) {
       installProgram(inst, ev->d.control.value);
       break;
     case CONTROL_CHANGE:
-      //ev->channel;
-      {
-        unsigned char cc = ev->d.control.param;
-        unsigned short val = ev->d.control.value;
-        //if(cc == 1){
-          ////break;
-        ////}
-      }
 #ifdef DEBUG_MIDI_CC
       {
 	unsigned char * ctrlUse = NULL;

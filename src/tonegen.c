@@ -399,6 +399,7 @@ static void initValues (struct b_tonegen *t) {
 #endif /* INDIVIDUAL_CONTACTS */
 #endif
 
+  t->mute = 0;
   t->swellPedalGain = 0.07; // initial level
   t->outputLevelTrim = 0.07; // 127/127 * midi-signal
   t->tuning = 440.0;
@@ -2855,6 +2856,15 @@ static void setSwellPedalFromMIDI (void *d, unsigned char u) {
   t->swellPedalGain = (t->outputLevelTrim * ((double) u)) / 127.0;
 }
 
+static void toggleMute (void *d, unsigned char u) {
+  struct b_tonegen *t = (struct b_tonegen *) d;
+  // ignore when the CC = 0 (button released)
+  if(u) {
+    t->mute = !t->mute;
+    printf("%s\n", t->mute ? "Muted" : "Unmuted");
+  }
+}
+
 /**
  * This routine initialises this module. When we come here during startup,
  * configuration files have already been read, so parameters should already
@@ -2988,6 +2998,8 @@ void initToneGenerator (struct b_tonegen *t, void *m) {
   useMIDIControlFunction (m, "percussion.decay",    setPercDecayFromMIDI, t);
   useMIDIControlFunction (m, "percussion.harmonic", setPercHarmonicFromMIDI, t);
   useMIDIControlFunction (m, "percussion.volume",   setPercVolumeFromMIDI, t);
+
+  useMIDIControlFunction (m, "volume.mute", toggleMute, t);
 
 #if DEBUG_TONEGEN_OSC
   dumpOscToText (t, "osc.txt");
@@ -3808,6 +3820,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
   /* Mix buffers, applying percussion and swell pedal. */
 
+  if(!t->mute)
   {
     const float * xp = swlBuffer;
     const float * vp = vibYBuffr;

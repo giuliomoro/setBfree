@@ -310,6 +310,11 @@ unsigned int upperKeyCount;
 
 
 /**
+ * Is the output muted
+ */
+unsigned int mute;
+
+/**
  * Swell pedal (volume control)
  */
 float swellPedalGain;

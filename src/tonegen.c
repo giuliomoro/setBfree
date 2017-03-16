@@ -3192,6 +3192,31 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber) {
  * there are changes to be made, and human fingers are typically quite
  * slow. Sequencers, however, may put some strain on things.
  */
+float** computeClosingDistance(unsigned int keys, unsigned int busbars, float min, float max)
+{
+	srand(0);
+	float** arr = (float**)malloc(keys * sizeof(float*));
+	if(arr == NULL)
+	{
+		fprintf(stderr, "Error while allocating\n");
+		exit(1);
+	}
+	for(unsigned int k = 0; k < keys; ++k)
+	{
+		arr[k] = (float*)malloc(busbars * sizeof(float));
+		if(arr[k] == NULL)
+		{
+			fprintf(stderr, "Error while allocating\n");
+			exit(1);
+		}
+		for(unsigned int b = 0; b < busbars; ++b)
+		{
+			arr[k][b] = rand()/(float)RAND_MAX * (max-min) + min;
+			printf("%.2f ", arr[k][b]);
+		}
+	}
+	return arr;
+}
 void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples) {
   
   static Keys* keys;
@@ -3199,17 +3224,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
   static int init = 0;
   static float pos[96];
   static float oldPos[96];
-  static float thr[9] = {
-    0.3,
-    0.35,
-    0.5,
-    0.55,
-    0.6,
-    0.65,
-    0.7,
-    0.75,
-    0.8
-  };
+  static float** contactClosingDistance = NULL;
   if(init == 0)
   {
     init = 1;
@@ -3227,6 +3242,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 	}
 	Keys_startTopCalibration(keys);
 	Keys_loadCalibrationFile(keys, "/root/spi-pru/out.txt");
+	contactClosingDistance = computeClosingDistance(61, 9, 0.2, 0.4);
   } 
   else
   {
@@ -3236,7 +3252,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
     for(int n = 0; n < 61; ++n){
       for(int bus = 0; bus < 9; ++bus)
       {
-        float threshold = thr[bus];
+        float threshold = contactClosingDistance[n][bus];
         if(pos[n] <= threshold && oldPos[n] > threshold)
         { // contact was inactive, we need to turn it on
           int contact = make_contact(bus, n);

@@ -286,9 +286,10 @@ CoreIns * coreReader;
 	  * multiple of BUFFER_SIZE_SAMPLES long
 	  */
 #define ENVELOPE_LENGTH ((1024 / BUFFER_SIZE_SAMPLES ) * BUFFER_SIZE_SAMPLES)
+#define RELEASE_ENVELOPE_LENGTH BUFFER_SIZE_SAMPLES
 float attackEnv[NUM_ENVELOPES][ENVELOPE_LENGTH]; /**< Attack envelope buffer for 9 buses */
 float* attackEnvEnd[NUM_ENVELOPES];
-float releaseEnv[NUM_ENVELOPES][ENVELOPE_LENGTH];/**< Release envelope buffer for 9 buses */
+float releaseEnv[NUM_ENVELOPES][RELEASE_ENVELOPE_LENGTH];/**< Release envelope buffer for 9 buses */
 
 
 int envAttackModel;

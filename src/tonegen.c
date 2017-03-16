@@ -214,6 +214,7 @@
  * 2001-11-30/FK Oscillator test using a sample buffer for the basic
  *               sinusoid and 9 individually updated read positions.
  */
+
 #ifndef CONFIGDOCONLY
 
 #define _XOPEN_SOURCE 700
@@ -358,6 +359,11 @@
 #define taperPlusOne      3.5
 #define taperPlusTwo      7.0
 
+#ifdef INDIVIDUAL_CONTACTS
+#define FIRST_SOUNDING_KEY 12
+#define TOTAL_SCANNER_KEYS 73
+#define NOF_DRAWBARS_PER_MANUAL 9
+#endif
 
 static float** computeClosingDistance(unsigned int keys, unsigned int busbars, float min, float max,unsigned int seed)
 {
@@ -379,7 +385,7 @@ static float** computeClosingDistance(unsigned int keys, unsigned int busbars, f
 		for(unsigned int b = 0; b < busbars; ++b)
 		{
 			arr[k][b] = rand()/(float)RAND_MAX * (max-min) + min;
-			printf("%.2f ", arr[k][b]);
+			//printf("%.2f ", arr[k][b]);
 		}
 	}
 	return arr;
@@ -399,7 +405,7 @@ static void initValues (struct b_tonegen *t) {
   t->persQueueEnd = &(t->persQueue[PERQSZ]);
 #endif /* LONG_ENVELOPES */
   t->envAttackModel  = ENV_CLICK;
-  t->envReleaseModel = ENV_COSINE;
+  t->envReleaseModel = ENV_LINEAR;
 
   t->envAttackClickLevel = 0.50;
   t->envReleaseClickLevel = 0.25;
@@ -483,6 +489,11 @@ static void initValues (struct b_tonegen *t) {
 
 #ifdef INDIVIDUAL_CONTACTS
   t->contactClosingDistance = computeClosingDistance(61, 9, 0.2, 0.4, 0);
+  // initialize previous reading of scanner keys
+  // to "fully up", so to avoid starting with 549 offsets
+  for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
+    t->oldPos[n] = 1;
+  }
 #endif /* INDIVIDUAL_CONTACTS */
 
 #ifdef HIPASS_PERCUSSION
@@ -2639,7 +2650,8 @@ static void initEnvelopes (struct b_tonegen *t) {
   int burst;			/* Samples in noist burst */
   int bound;
   int start;			/* Sample where burst starts */
-  double T = (double) (ENVELOPE_LENGTH - 1); /* 127.0 */
+  double T = (double) (ENVELOPE_LENGTH - 1);
+  double Trelease = (double) (RELEASE_ENVELOPE_LENGTH - 1); /* 127.0 */
 
   for (b = 0; b < 9; b++) {
 
@@ -2724,42 +2736,42 @@ static void initEnvelopes (struct b_tonegen *t) {
 
     if (t->envAttackModel == ENV_COSINE) {	/* Sigmoid decay */
       for (i = 0; i < ENVELOPE_LENGTH; i++) {
-	int d = ENVELOPE_LENGTH - (i + 1);
-	double a = (M_PI * (double) d) / T;	/* PI < a <= 0 */
-	t->attackEnv [b][i] = 0.5 + (0.5 * cos (a));
+	    int d = ENVELOPE_LENGTH - (i + 1);
+	    double a = (M_PI * (double) d) / T;	/* PI < a <= 0 */
+	    t->attackEnv [b][i] = 0.5 + (0.5 * cos (a));
       }
     }
 
     if (t->envReleaseModel == ENV_COSINE) {
-      for (i = 0; i < ENVELOPE_LENGTH; i++) {
-	double a = (M_PI * (double) i) / T;	/* 0 < b <= PI */
-	t->releaseEnv[b][i] = 0.5 - (0.5 * cos (a));
+      for (i = 0; i < RELEASE_ENVELOPE_LENGTH; i++) {
+        double a = (M_PI * (double) i) / Trelease;	/* 0 < b <= PI */
+        t->releaseEnv[b][i] = 0.5 + (0.5 * cos (a));
       }
     }
 
-    if (t->envAttackModel == ENV_LINEAR) {	/* Linear decay */
+    if (t->envAttackModel == ENV_LINEAR) {	/* Linear attack */
       int k = ENVELOPE_LENGTH;			/* TEST SPECIAL */
 
       for (i = 0; i < ENVELOPE_LENGTH; i++) {
-	if (i < k) {
-	  t->attackEnv[b][i]  = ((float) i) / (float) k;
-	} else {
-	  t->attackEnv[b][i] = 1.0;
-	}
+        if (i < k) {
+          t->attackEnv[b][i]  = ((float) i) / (float) k;
+        } else {
+          t->attackEnv[b][i] = 1.0;
+        }
       }
     }
 
-    if (t->envReleaseModel == ENV_LINEAR) {
-      int k = ENVELOPE_LENGTH;			/* TEST SPECIAL */
+    if (t->envReleaseModel == ENV_LINEAR) {	/* Linear decay */
+      int k = RELEASE_ENVELOPE_LENGTH;			/* TEST SPECIAL */
 
-      for (i = 0; i < ENVELOPE_LENGTH; i++) {
-	if (i < k) {
-	  t->releaseEnv[b][i] = ((float) i) / (float) k;
-	} else {
-	  t->releaseEnv[b][i] = 1.0;
+      for (i = 0; i < RELEASE_ENVELOPE_LENGTH; i++) {
+	    if (i < k) {
+	      t->releaseEnv[b][i] = ((float) (k - i)) / (float) k;
+	    } else {
+	      t->releaseEnv[b][i] = 1.0;
+	    }
+	  }
 	}
-      }
-    }
 
   } /* for each envelope buffer */
 }
@@ -3143,10 +3155,10 @@ void oscKeyOn (struct b_tonegen *t, unsigned char keyNumber, unsigned char realK
 
 #ifdef INDIVIDUAL_CONTACTS
 void oscContactOff (struct b_tonegen *t, unsigned short contactNumber) {
-  rt_printf("contactOff: %d\n", contactNumber);
   if (MAX_CONTACTS <= contactNumber) return;
   /* The key must be marked as on */
   if (t->activeContacts[contactNumber] != 0) {
+    rt_printf("contactOff: %d\n", contactNumber);
     /* Flag the contact as inactive */
     t->activeContacts[contactNumber] = 0;
     /* TODO" handle percussion: count active contacts on percussion bus */
@@ -3249,20 +3261,20 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 	float* pos = t->pos;
 	float* oldPos = t->oldPos;
 	float** contactClosingDistance = t->contactClosingDistance;
-    for(int n = 0; n < 73; ++n){
+    for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
       pos[n] = Keys_getNoteValue(keys, n + 24);
     }
 	t->mute = 0;
-    for(int n = 11; n < 12; ++n){
+    for(int n = 11; n < FIRST_SOUNDING_KEY; ++n){
 	  // if using one of the presets,
 	  // do not generate output
 	  if(oldPos[n] < 0.5)
 	    t->mute = 1;
 	}
-    for(int n = 12; n < 73; ++n){
-      for(int bus = 0; bus < 9; ++bus)
+    for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n){
+      for(int bus = 0; bus < NOF_DRAWBARS_PER_MANUAL ; ++bus)
       {
-		int playingKey = n - 12;
+        int playingKey = n - FIRST_SOUNDING_KEY;
         float threshold = contactClosingDistance[playingKey][bus];
         if(pos[n] <= threshold && oldPos[n] > threshold)
         { // contact was inactive, we need to turn it on
@@ -3276,7 +3288,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
         }
       }
 	}
-    for(int n = 0; n < 73; ++n){
+    for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
 	  oldPos[n] = pos[n];
 	}
 	static int count = 0;
@@ -3284,7 +3296,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 	{
 		rt_printf("%2d", (int)(pos[11]*10));
 		rt_printf("%s ", t->mute ? "m" : "_");
-		for(int n = 12; n < 73; ++n)
+		for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n)
 			rt_printf("%2d ", (int)(pos[n]*10));
 		rt_printf("\n");
 	}

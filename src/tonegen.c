@@ -3839,8 +3839,12 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
   /* Mix buffers, applying percussion and swell pedal. */
 
-  if(!t->mute)
+  if(t->mute)
   {
+	for (i = 0; i < BUFFER_SIZE_SAMPLES; i++) { /* Mute */
+	  *yptr++ = 0;
+    }
+  } else {
     const float * xp = swlBuffer;
     const float * vp = vibYBuffr;
     const float * pp = prcBuffer;

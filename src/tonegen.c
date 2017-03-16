@@ -358,7 +358,32 @@
 #define taperPlusOne      3.5
 #define taperPlusTwo      7.0
 
-#include <Keys_c.h>
+
+static float** computeClosingDistance(unsigned int keys, unsigned int busbars, float min, float max,unsigned int seed)
+{
+	srand(seed);
+	float** arr = (float**)malloc(keys * sizeof(float*));
+	if(arr == NULL)
+	{
+		fprintf(stderr, "Error while allocating\n");
+		exit(1);
+	}
+	for(unsigned int k = 0; k < keys; ++k)
+	{
+		arr[k] = (float*)malloc(busbars * sizeof(float));
+		if(arr[k] == NULL)
+		{
+			fprintf(stderr, "Error while allocating\n");
+			exit(1);
+		}
+		for(unsigned int b = 0; b < busbars; ++b)
+		{
+			arr[k][b] = rand()/(float)RAND_MAX * (max-min) + min;
+			printf("%.2f ", arr[k][b]);
+		}
+	}
+	return arr;
+}
 
 static void initValues (struct b_tonegen *t) {
   t->leConfig = NULL;
@@ -455,6 +480,10 @@ static void initValues (struct b_tonegen *t) {
   //t->wheel_Harmonics  = { 1.0 }; /** < amplitudes of tonewheel harmonics */
 
   t->outputGain = 1.0;
+
+#ifdef INDIVIDUAL_CONTACTS
+  t->contactClosingDistance = computeClosingDistance(61, 9, 0.2, 0.4, 0);
+#endif /* INDIVIDUAL_CONTACTS */
 
 #ifdef HIPASS_PERCUSSION
   t->pz = 0;
@@ -863,6 +892,26 @@ static double taperingModel (int key, int bus) {
   return dBToGain (tapering);
 }
 
+static void startKeyboardScanning(struct b_tonegen *t){
+  if(t->bt)
+    BoardsTopology_delete(t->bt);
+  if(t->keys)
+    Keys_delete(t->keys);
+  t->bt = BoardsTopology_new();
+  t->keys = Keys_new();
+  BoardsTopology_setLowestNote(t->bt, 36);
+  BoardsTopology_setBoard(t->bt, 0, 0, 24);
+  BoardsTopology_setBoard(t->bt, 1, 0, 23);
+  BoardsTopology_setBoard(t->bt, 2, 12, 23);
+  int ret = Keys_start(t->keys, t->bt, NULL);
+  if(ret < 0)
+  {
+    printf("Error starting keys: %d\n", ret);
+    exit(1);
+  }
+  Keys_startTopCalibration(t->keys);
+  Keys_loadCalibrationFile(t->keys, "/root/spi-pru/out.txt");
+}
 /**
  * Applies the built-in default model to the manual tapering and crosstalk.
  */
@@ -1132,6 +1181,7 @@ static void applyDefaultConfiguration (struct b_tonegen *t) {
    * still benefit from the crosstalk modelled for the tonegenerator
    * terminals.
    */
+  startKeyboardScanning(t);
 
 } /* applyDefaultConfiguration */
 
@@ -3192,60 +3242,13 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber) {
  * there are changes to be made, and human fingers are typically quite
  * slow. Sequencers, however, may put some strain on things.
  */
-float** computeClosingDistance(unsigned int keys, unsigned int busbars, float min, float max)
-{
-	srand(0);
-	float** arr = (float**)malloc(keys * sizeof(float*));
-	if(arr == NULL)
-	{
-		fprintf(stderr, "Error while allocating\n");
-		exit(1);
-	}
-	for(unsigned int k = 0; k < keys; ++k)
-	{
-		arr[k] = (float*)malloc(busbars * sizeof(float));
-		if(arr[k] == NULL)
-		{
-			fprintf(stderr, "Error while allocating\n");
-			exit(1);
-		}
-		for(unsigned int b = 0; b < busbars; ++b)
-		{
-			arr[k][b] = rand()/(float)RAND_MAX * (max-min) + min;
-			printf("%.2f ", arr[k][b]);
-		}
-	}
-	return arr;
-}
 void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples) {
   
-  static Keys* keys;
-  static BoardsTopology* bt;
-  static int init = 0;
-  static float pos[96];
-  static float oldPos[96];
-  static float** contactClosingDistance = NULL;
-  if(init == 0)
   {
-    init = 1;
-	bt = BoardsTopology_new();
-	keys = Keys_new();
-    BoardsTopology_setLowestNote(bt, 36);
-    BoardsTopology_setBoard(bt, 0, 0, 24);
-    BoardsTopology_setBoard(bt, 1, 0, 23);
-    BoardsTopology_setBoard(bt, 2, 12, 23);
-    int ret = Keys_start(keys, bt, NULL);
-	if(ret < 0)
-	{
-		printf("Error: %d\n", ret);
-		exit(1);
-	}
-	Keys_startTopCalibration(keys);
-	Keys_loadCalibrationFile(keys, "/root/spi-pru/out.txt");
-	contactClosingDistance = computeClosingDistance(61, 9, 0.2, 0.4);
-  } 
-  else
-  {
+	Keys* keys = t->keys;
+	float* pos = t->pos;
+	float* oldPos = t->oldPos;
+	float** contactClosingDistance = t->contactClosingDistance;
     for(int n = 0; n < 61; ++n){
       pos[n] = Keys_getNoteValue(keys, n + 36);
     }
@@ -3268,7 +3271,6 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
     for(int n = 0; n < 61; ++n){
 	  oldPos[n] = pos[n];
 	}
-  }
 	static int count = 0;
 	if(count % 70 == 0)
 	{
@@ -3277,6 +3279,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 		rt_printf("\n");
 	}
 	count++;
+  }
 
 
   int i;

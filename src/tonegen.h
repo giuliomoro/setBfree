@@ -24,6 +24,7 @@
 #ifndef TONEGEN_H
 #define TONEGEN_H
 #include <stdbool.h>
+
 #define DEBUG_TONEGEN_OSC 1
 int rt_printf(const char *format, ...);
 
@@ -64,9 +65,9 @@ typedef struct deflist_element {
       float fb;
     } ff;
     struct {
-      short sa;
-      short sb;
-      float fc;
+      short sa; /* WHEEL_NUMBER_OF or HARMONIC_NUMBER_OF */
+      short sb; /* BUSNUMBER_OF */
+      float fc; /* LEVEL_OF or TAPER_OF or WHEEL_LEVEL_OF or HARMONIC_LEVEL_OF */
     } ssf;
   } u;
 } ListElement;
@@ -88,6 +89,7 @@ typedef struct deflist_element {
 
 #define INDIVIDUAL_CONTACTS
 #ifdef INDIVIDUAL_CONTACTS
+#include <Keys_c.h>
 #include "contacts.h"
 #endif /* INDIVIDUAL_CONTACTS */
 
@@ -361,6 +363,31 @@ unsigned int _activeKeys [MAX_KEYS/32];
  * boolean 0,1
  */
 bool activeContacts [MAX_CONTACTS];
+
+/*
+ * Current position of each key
+ */
+float pos[96];
+
+/*
+ * Previous position of each key
+ */
+float oldPos[96];
+
+/*
+ * Array containing closing distance for each bus for each key
+ */
+float** contactClosingDistance;
+
+/*
+ * The object that handles the keys
+ */
+Keys* keys;
+
+/*
+ * The topology of the boards connected
+ */
+BoardsTopology* bt;
 #endif /* INDIVIDUAL_CONTACTS */
 
 /*

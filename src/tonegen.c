@@ -899,10 +899,10 @@ static void startKeyboardScanning(struct b_tonegen *t){
     Keys_delete(t->keys);
   t->bt = BoardsTopology_new();
   t->keys = Keys_new();
-  BoardsTopology_setLowestNote(t->bt, 36);
+  BoardsTopology_setLowestNote(t->bt, 24);
   BoardsTopology_setBoard(t->bt, 0, 0, 24);
   BoardsTopology_setBoard(t->bt, 1, 0, 23);
-  BoardsTopology_setBoard(t->bt, 2, 12, 23);
+  BoardsTopology_setBoard(t->bt, 2, 0, 23);
   int ret = Keys_start(t->keys, t->bt, NULL);
   if(ret < 0)
   {
@@ -3249,33 +3249,43 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 	float* pos = t->pos;
 	float* oldPos = t->oldPos;
 	float** contactClosingDistance = t->contactClosingDistance;
-    for(int n = 0; n < 61; ++n){
-      pos[n] = Keys_getNoteValue(keys, n + 36);
+    for(int n = 0; n < 73; ++n){
+      pos[n] = Keys_getNoteValue(keys, n + 24);
     }
-    for(int n = 0; n < 61; ++n){
+	t->mute = 0;
+    for(int n = 11; n < 12; ++n){
+	  // if using one of the presets,
+	  // do not generate output
+	  if(oldPos[n] < 0.5)
+	    t->mute = 1;
+	}
+    for(int n = 12; n < 73; ++n){
       for(int bus = 0; bus < 9; ++bus)
       {
-        float threshold = contactClosingDistance[n][bus];
+		int playingKey = n - 12;
+        float threshold = contactClosingDistance[playingKey][bus];
         if(pos[n] <= threshold && oldPos[n] > threshold)
         { // contact was inactive, we need to turn it on
-          int contact = make_contact(bus, n);
+          int contact = make_contact(bus, playingKey);
           oscContactOn(t, contact);
         }
         else if(pos[n] > threshold && oldPos[n] <= threshold)
         { // contact was active, we need to turn it off
-          int contact = make_contact(bus, n);
+          int contact = make_contact(bus, playingKey);
           oscContactOff(t, contact);
         }
       }
 	}
-    for(int n = 0; n < 61; ++n){
+    for(int n = 0; n < 73; ++n){
 	  oldPos[n] = pos[n];
 	}
 	static int count = 0;
 	if(count % 70 == 0)
 	{
-		for(int n = 0; n < 61; ++n)
-			rt_printf("%1d ", (int)(pos[n]*10));
+		rt_printf("%2d", (int)(pos[11]*10));
+		rt_printf("%s ", t->mute ? "m" : "_");
+		for(int n = 12; n < 73; ++n)
+			rt_printf("%2d ", (int)(pos[n]*10));
 		rt_printf("\n");
 	}
 	count++;

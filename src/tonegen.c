@@ -405,14 +405,14 @@ static void initValues (struct b_tonegen *t) {
   t->persQueueEnd = &(t->persQueue[PERQSZ]);
 #endif /* LONG_ENVELOPES */
   t->envAttackModel  = ENV_CLICK;
-  t->envReleaseModel = ENV_LINEAR;
+  t->envReleaseModel = ENV_COSINE;
 
-  t->envAttackClickLevel = 0.50;
+  t->envAttackClickLevel = 1.0;
   t->envReleaseClickLevel = 0.25;
 
   /* these are set later in initToneGenerator() */
-  t->envAtkClkMinLength = -1; //  8 @ 22050
-  t->envAtkClkMaxLength = -1; // 40 @ 22050
+  t->envAtkClkMinLength = 5; //  8 @ 22050
+  t->envAtkClkMaxLength = 100; // 40 @ 22050
 
   t->newRouting = 0;
   t->oldRouting = 0;

@@ -2704,6 +2704,7 @@ static void initEnvelopes (struct b_tonegen *t) {
     }
 
     if (t->envReleaseModel == ENV_SHELF) {
+      int bss = RELEASE_ENVELOPE_LENGTH;
       bound = t->envAtkClkMaxLength - t->envAtkClkMinLength;
       if (bound < 1) bound = 1;
       start = rand () % bound;

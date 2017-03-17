@@ -3184,7 +3184,6 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber) {
   if (MAX_CONTACTS <= contactNumber) return;
   /* If the contact is already depressed, release it first. */
   if (t->activeContacts[contactNumber] != 0) {
-    rt_printf("NoteOFF\n");
     oscContactOff (t, contactNumber);
   }
   /* Mark the contact as active */
@@ -3257,6 +3256,7 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber) {
  */
 void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples) {
   
+  int mute = t->mute;
   {
 	Keys* keys = t->keys;
 	float* pos = t->pos;
@@ -3265,13 +3265,12 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
     for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
       pos[n] = Keys_getNoteValue(keys, n + 24);
     }
-	t->mute = 0;
-    for(int n = 11; n < FIRST_SOUNDING_KEY; ++n){
+    for(int n = 10; n < FIRST_SOUNDING_KEY; ++n){
 	  // if using one of the presets,
 	  // do not generate output
-	  if(oldPos[n] < 0.5)
-	    t->mute = 1;
-	}
+      if(pos[n] < 0.5)
+        mute = 1;
+    }
     for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n){
       for(int bus = 0; bus < NOF_DRAWBARS_PER_MANUAL ; ++bus)
       {
@@ -3295,9 +3294,8 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 	static int count = 0;
 	if(count % 70 == 0)
 	{
-		rt_printf("%2d", (int)(pos[11]*10));
-		rt_printf("%s ", t->mute ? "m" : "_");
-		for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n)
+		rt_printf("%s ", mute ? "m" : "_");
+		for(int n = 10; n < TOTAL_SCANNER_KEYS; ++n)
 			rt_printf("%2d ", (int)(pos[n]*10));
 		rt_printf("\n");
 	}
@@ -3862,7 +3860,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
   /* Mix buffers, applying percussion and swell pedal. */
 
-  if(t->mute)
+  if(mute)
   {
 	for (i = 0; i < BUFFER_SIZE_SAMPLES; i++) { /* Mute */
 	  *yptr++ = 0;

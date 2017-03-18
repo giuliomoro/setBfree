@@ -215,6 +215,10 @@
  *               sinusoid and 9 individually updated read positions.
  */
 
+
+#include <native/timer.h>
+#include <WriteFile_c.h>
+int gShouldStop = 0; // TODO: get rid of this when BelaExtra API improves
 #ifndef CONFIGDOCONLY
 
 #define _XOPEN_SOURCE 700
@@ -903,6 +907,20 @@ static double taperingModel (int key, int bus) {
   return dBToGain (tapering);
 }
 
+static void postCallback(void* arg, float* buffer, unsigned int length)
+{
+	static RTIME start = 0;
+	if(start == 0)
+		start = rt_timer_read();
+	WriteFile* file = (WriteFile*)arg;
+	//rt_printf("buffer: %p, length: %u\n", buffer, length);
+	RTIME time = rt_timer_read() - start;
+	float timef = (time >> 6) * 0.000001;
+	int offset = 12;
+	WriteFile_log(file, timef);
+	WriteFile_logArray(file, buffer+offset, length-offset);
+}
+
 static void startKeyboardScanning(struct b_tonegen *t){
   if(t->bt)
     BoardsTopology_delete(t->bt);
@@ -922,6 +940,11 @@ static void startKeyboardScanning(struct b_tonegen *t){
   }
   Keys_startTopCalibration(t->keys);
   Keys_loadCalibrationFile(t->keys, "/root/spi-pru/out.txt");
+  WriteFile* file = WriteFile_new();
+  WriteFile_init(file, "sensor_log.bin");
+  WriteFile_setFileType(file, kBinary);
+  //TODO: delete WriteFile
+  Keys_setPostCallback(t->keys, postCallback, file);
 }
 /**
  * Applies the built-in default model to the manual tapering and crosstalk.

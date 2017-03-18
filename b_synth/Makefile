@@ -2,8 +2,8 @@ MODNAME=setBfree
 include ../common.mak
 include ../git2lv2.mk
 
-LOADLIBES = -lm `/usr/xenomai/bin/xeno-config --skin native --ldflags`
-override CFLAGS+= -I../src -I../b_overdrive -I../b_reverb -I../b_whirl -DJACK_DESCRIPT -I/root/spi-pru
+LOADLIBES = /root/Bela/build/libbelaextra.a -lm `/usr/xenomai/bin/xeno-config --skin native --ldflags`
+override CFLAGS+= -I../src -I../b_overdrive -I../b_reverb -I../b_whirl -DJACK_DESCRIPT -I/root/spi-pru  `/usr/xenomai/bin/xeno-config --skin=native --cflags`
 override CFLAGS+=`pkg-config --cflags lv2` -DLV2SYNTH -fvisibility=hidden
 targets=
 

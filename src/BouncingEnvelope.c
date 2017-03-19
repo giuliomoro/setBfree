@@ -1,6 +1,7 @@
 #include <BouncingEnvelope.h>
 #include <stdio.h>
 #include <math.h>
+#include <math_neon.h>
 #include <stdlib.h>
 
 static float open = 0;
@@ -8,6 +9,8 @@ static float closed = 1;
 void BouncingEnvelope_init(BouncingEnvelope* be, short velocity)
 {	
 	be->amplitude = velocity/64.f;
+	if(be->amplitude < 0)
+		be->amplitude = 0;
 	be->contactPosition = be->amplitude;
 	be->highThreshold = 0.2;
 	be->lowThreshold = 0.015;
@@ -30,7 +33,7 @@ void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buf
 	float contactPosition;
 	for(int n = 0; n < length; ++n)
 	{
-		contactPosition = amplitude * cosf(phase);
+		contactPosition = amplitude * cosf_neon(phase);
 		if (contactPositionPrev > 0 && contactPosition < 0)
 		{
 			// changed direction, start a new oscillation

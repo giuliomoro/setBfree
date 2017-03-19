@@ -281,17 +281,17 @@ int gShouldStop = 0; // TODO: get rid of this when BelaExtra API improves
  * The message layout is:
  *  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
  * [ Message  ] [                           Parameter (currently only uses 12 bit)                 ]
- * [0  0  0  0]                                     [ velocity ] [       Key on number             ]
- * [0  0  0  1]                                     [ velocity ] [       Key on number             ]
- * [0  0  1  0]                                     [ velocity ] [      Contact on number          ]
- * [0  0  1  1]                                     [ velocity ] [      Contact on number          ]
+ * [0  0  0  0]                             [     velocity     ] [       Key on number             ]
+ * [0  0  0  1]                             [     velocity     ] [       Key on number             ]
+ * [0  0  1  0]                             [     velocity     ] [      Contact on number          ]
+ * [0  0  1  1]                             [     velocity     ] [      Contact on number          ]
  */
 
 /* Message field access macros */
 #define MSG_MMASK 0xf0000000
 #define MSG_PMASK 0x0fffffff
 #define MSG_VELOCITY_SHIFT 12
-#define MSG_VELOCITY_MASK (0xff << MSG_VELOCITY_SHIFT)
+#define MSG_VELOCITY_MASK (0xffff << MSG_VELOCITY_SHIFT)
 #define MSG_NUMBERMASK 0xfff
 
 /* Retrive message part from a message */

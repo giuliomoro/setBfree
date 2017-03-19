@@ -3335,18 +3335,21 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 	}
 	static int count = 0;
 	/* auto play */
-	//if(count % 1000 == 0){
-		//oscContactOn(t, 216, 127);
-		//oscContactOn(t, 217, 127);
-	//}
-	//if(count % 1000 == 500){
-		//oscContactOff(t, 217, 0);
-	//}
-	//if(count % 1000 == 501){
-		//oscContactOff(t, 216, 0);
-	//}
-	//if(count % 500 == 0){
-	//}
+	if(0)
+	{
+		if(count % 1000 == 0){
+			static int state  = 0;
+			oscContactOn(t, 216, 1 + (126 * state));
+			oscContactOn(t, 217, 1 + (126 * state));
+			state = !state;
+		}
+		if(count % 1000 == 500){
+			oscContactOff(t, 217, 0);
+		}
+		if(count % 1000 == 500){
+			oscContactOff(t, 216, 0);
+		}
+	}
 	if(count % 70 == 0)
 	{
 		rt_printf("%s ", mute ? "m" : "_");
@@ -3552,7 +3555,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 			/* All envelopes, both attack and release must traverse 0-1. */
 
       t->coreWriter->env = t->releaseEnv[i & 7];
-	  //rt_printf("Using releaseEnv %d %d\n", i&7, i);
+	  rt_printf("Using releaseEnv %d %d\n", i&7, i);
 
       if (copyDone) {
         t->coreWriter->opr = CR_ADDENV;
@@ -3686,12 +3689,12 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
         if (osp->be == NULL) { // the envelope is not init'd
 		  osp->be = &t->bes[oscNumber];
 		  BouncingEnvelope_init(osp->be, osp->velocity);
-          env = t->attackEnv[i & 7]; // pick one envelope
-	      //rt_printf("Use attackEnv %d %3d\n", i&7, i);
+	      rt_printf("Use attackEnv %3d, velocity: %d\n", i, osp->velocity);
           osp->remaining = ENVELOPE_LENGTH;
           osp->rflags |= ORF_PERSISTED;
         }
         if(osp->be) { //the envelope is already active
+		  BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env);
           int remaining = (osp->remaining) - BUFFER_SIZE_SAMPLES;
           if (remaining <= 0) { // the envelope is completed
             envelopeCompleted = 1; 
@@ -3699,7 +3702,6 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
             osp->rflags &= ~ORF_PERSISTED; // forget about it
           }
         }
-		BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env);
 #else
         env = t->attackEnv[i & 7];
 #endif /* LONG_ENVELOPES */

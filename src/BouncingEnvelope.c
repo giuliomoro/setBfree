@@ -7,7 +7,7 @@ static float open = 0;
 static float closed = 1;
 void BouncingEnvelope_init(BouncingEnvelope* be, short velocity)
 {	
-	be->amplitude = 1;
+	be->amplitude = velocity/64.f;
 	be->contactPosition = be->amplitude;
 	be->highThreshold = 0.2;
 	be->lowThreshold = 0.015;

@@ -279,36 +279,46 @@ int gShouldStop = 0; // TODO: get rid of this when BelaExtra API improves
 
 /*
  * The message layout is:
- *
- * 15 14 13 12  11 10  9  8  7  6  5  4  3  2  1  0
- * [ Message  ] [             Parameter           ]
- * [0  0  0  0] [            Key number           ]    Key off
- * [0  0  0  1] [            Key number           ]    Key on
- *
+ *  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+ * [ Message  ] [                           Parameter (currently only uses 12 bit)                 ]
+ * [0  0  0  0]                                     [ velocity ] [       Key on number             ]
+ * [0  0  0  1]                                     [ velocity ] [       Key on number             ]
+ * [0  0  1  0]                                     [ velocity ] [      Contact on number          ]
+ * [0  0  1  1]                                     [ velocity ] [      Contact on number          ]
  */
 
 /* Message field access macros */
-#define MSG_MMASK 0xf000
-#define MSG_PMASK 0x0fff
+#define MSG_MMASK 0xf0000000
+#define MSG_PMASK 0x0fffffff
+#define MSG_VELOCITY_SHIFT 12
+#define MSG_VELOCITY_MASK (0xff << MSG_VELOCITY_SHIFT)
+#define MSG_NUMBERMASK 0xfff
+
 /* Retrive message part from a message */
 #define MSG_GET_MSG(M) ((M) & MSG_MMASK)
 /* Retrieve parameter part from a message */
 #define MSG_GET_PRM(M) ((M) & MSG_PMASK)
+#define MSG_GET_NUMBER(M) ((M) & MSG_NUMBERMASK)
+#define MSG_GET_VELOCITY(M) (((M) & MSG_VELOCITY_MASK) >> MSG_VELOCITY_SHIFT)
 /* Messages */
-#define MSG_MKEYOFF 0x0000
-#define MSG_MKEYON  0x1000
+#define MSG_MKEYOFF 0x00000000
+#define MSG_MKEYON  0x10000000
 /* Key released message, arg is keynumber */
 #define MSG_KEY_OFF(K) (MSG_MKEYOFF | ((K) & MSG_PMASK))
 /* Key depressed message, arg is keynumber */
 #define MSG_KEY_ON(K)  (MSG_MKEYON  | ((K) & MSG_PMASK))
 
 #ifdef INDIVIDUAL_CONTACTS
-#define MSG_MCONTACTOFF  0x2000
-#define MSG_MCONTACTON  0x3000
-/* Contact closed message, arg is contactnumber */
-#define MSG_CONTACT_OFF(K)  (MSG_MCONTACTOFF  | ((K) & MSG_PMASK))
-/* Contact open message, arg is contactnumber */
-#define MSG_CONTACT_ON(K)  (MSG_MCONTACTON  | ((K) & MSG_PMASK))
+#define MSG_MCONTACTOFF  0x20000000
+#define MSG_MCONTACTON  0x30000000
+/* Contact closed message, args is contactnumber and velocity */
+#define MSG_CONTACT_OFF(C, V)  (MSG_MCONTACTOFF  |\
+								(((V) << MSG_VELOCITY_SHIFT) & MSG_VELOCITY_MASK) |\
+								((C) & MSG_PMASK))
+/* Contact open message, args are contactnumber and velocity */
+#define MSG_CONTACT_ON(C, V)  (MSG_MCONTACTON  |\
+								(((V) << MSG_VELOCITY_SHIFT)  & MSG_VELOCITY_MASK) |\
+								((C) & MSG_PMASK))
 #endif /* INDIVIDUAL_CONTACTS */
 
 
@@ -3178,7 +3188,7 @@ void oscKeyOn (struct b_tonegen *t, unsigned char keyNumber, unsigned char realK
 }
 
 #ifdef INDIVIDUAL_CONTACTS
-void oscContactOff (struct b_tonegen *t, unsigned short contactNumber) {
+void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity) {
   if (MAX_CONTACTS <= contactNumber) return;
   /* The key must be marked as on */
   if (t->activeContacts[contactNumber] != 0) {
@@ -3191,7 +3201,7 @@ void oscContactOff (struct b_tonegen *t, unsigned short contactNumber) {
      assert (0 <= t->contactDownCount);
 #endif /* KEYCOMPRESSION */
      /* Write message saying that the key is released */
-     *t->msgQueueWriter++ = MSG_CONTACT_OFF(contactNumber);
+     *t->msgQueueWriter++ = MSG_CONTACT_OFF(contactNumber, velocity);
      /* Check for wrap on message queue */
      if (t->msgQueueWriter == t->msgQueueEnd) {
        t->msgQueueWriter = t->msgQueue;
@@ -3202,12 +3212,12 @@ void oscContactOff (struct b_tonegen *t, unsigned short contactNumber) {
  * This function is the entry point for the MIDI parser when it has received
  * a CONTACT ON message on a channel and note number mapped to a playing key.
  */
-void oscContactOn (struct b_tonegen *t, unsigned short contactNumber) {
-  rt_printf("contactOn: %d\n", contactNumber);
+void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity) {
+  //rt_printf("contactOn: %d\n", contactNumber);
   if (MAX_CONTACTS <= contactNumber) return;
   /* If the contact is already depressed, release it first. */
   if (t->activeContacts[contactNumber] != 0) {
-    oscContactOff (t, contactNumber);
+    oscContactOff (t, contactNumber, 0);
   }
   /* Mark the contact as active */
   t->activeContacts[contactNumber] = 1;
@@ -3217,7 +3227,7 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber) {
   t->contactDownCount++;
 #endif /* KEYCOMPRESSION */
   /* Write message */
-  *t->msgQueueWriter++ = MSG_CONTACT_ON(contactNumber);
+  *t->msgQueueWriter++ = MSG_CONTACT_ON(contactNumber, velocity);
   /* Check for wrap on message queue */
   if (t->msgQueueWriter == t->msgQueueEnd) {
     t->msgQueueWriter = t->msgQueue;
@@ -3302,12 +3312,12 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
         if(pos[n] <= threshold && oldPos[n] > threshold)
         { // contact was inactive, we need to turn it on
           int contact = make_contact(bus, playingKey);
-          oscContactOn(t, contact);
+          oscContactOn(t, contact, 99);
         }
         else if(pos[n] > threshold && oldPos[n] <= threshold)
         { // contact was active, we need to turn it off
           int contact = make_contact(bus, playingKey);
-          oscContactOff(t, contact);
+          oscContactOff(t, contact, 10);
         }
       }
 	}
@@ -3366,7 +3376,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
   while (t->msgQueueReader != t->msgQueueWriter) {
 
-    unsigned short msg = *t->msgQueueReader++; /* Read next message */
+    msg_queue_t msg = *t->msgQueueReader++; /* Read next message */
     int keyNumber;
     ListElement * lep;
 
@@ -3376,7 +3386,8 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
     }
 
     if (MSG_GET_MSG(msg) == MSG_MCONTACTON) {
-      int contactNumber = MSG_GET_PRM(msg);
+      int contactNumber = MSG_GET_NUMBER(msg);
+      short velocity = MSG_GET_VELOCITY(msg);
       int busNumber = get_contact_bus(contactNumber);
       int keyNumber = get_contact_key(contactNumber);
       rt_printf("bus: %d, key: %d\n", get_contact_bus(contactNumber), get_contact_key(contactNumber));
@@ -3406,7 +3417,8 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
       }
     }
     else if (MSG_GET_MSG(msg) == MSG_MCONTACTOFF) {
-      int contactNumber = MSG_GET_PRM(msg);
+      int contactNumber = MSG_GET_NUMBER(msg);
+      short velocity = MSG_GET_VELOCITY(msg);
       int busNumber = get_contact_bus(contactNumber);
       int keyNumber = get_contact_key(contactNumber);
       for (lep = t->keyContrib[keyNumber]; lep != NULL; lep = lep->next) {
@@ -3494,6 +3506,12 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
   /*
    * At this point, new oscillators has been added to the active list
    * and removed oscillators are still on the list.
+   */
+
+  /*
+   * Note that if you have a contact offset but the oscillator
+   * is still playing in another contact, then the oscillator will get
+   * an ATTACK envelope instead of a RELEASE one
    */
   for (i = 0; i < t->activeOscLEnd; i++) {
 

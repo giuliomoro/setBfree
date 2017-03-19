@@ -24,6 +24,7 @@
 #ifndef TONEGEN_H
 #define TONEGEN_H
 #include <stdbool.h>
+#include <inttypes.h>
 
 #define DEBUG_TONEGEN_OSC 1
 int rt_printf(const char *format, ...);
@@ -52,6 +53,8 @@ int rt_printf(const char *format, ...);
 
 #define BUFFER_SIZE_SAMPLES 128
 
+// Message
+typedef uint32_t msg_queue_t;
 
 /**
  * List element definition for the distribution network specification.
@@ -225,11 +228,11 @@ int activeOscLEnd; /**< end of activeOscList */
  * The size of the message queue.
  */
 #define MSGQSZ 1024
-unsigned short   msgQueue [MSGQSZ]; /**< Message queue ringbuffer - MIDI->Synth */
+msg_queue_t msgQueue [MSGQSZ]; /**< Message queue ringbuffer - MIDI->Synth */
 
-unsigned short * msgQueueWriter; /**< message-queue srite pointer */
-unsigned short * msgQueueReader; /**< message-queue read pointer */
-unsigned short * msgQueueEnd;
+msg_queue_t * msgQueueWriter; /**< message-queue srite pointer */
+msg_queue_t * msgQueueReader; /**< message-queue read pointer */
+msg_queue_t * msgQueueEnd;
 
 #ifdef LONG_ENVELOPES
 #define PERQSZ 1024 // should actually be the total number of contacts
@@ -658,8 +661,8 @@ extern void initToneGenerator (struct b_tonegen *t, void *m);
 extern void freeToneGenerator (struct b_tonegen *t);
 
 #ifdef INDIVIDUAL_CONTACTS
-extern void oscContactOff (struct b_tonegen *t, unsigned short midiNote);
-extern void oscContactOn (struct b_tonegen *t, unsigned short midiNote);
+extern void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity);
+extern void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity);
 #endif /* INDIVIDUAL_CONTACTS */
 extern void oscKeyOff (struct b_tonegen *t, unsigned char midiNote, unsigned char realKey);
 extern void oscKeyOn (struct b_tonegen *t, unsigned char midiNote, unsigned char realKey);

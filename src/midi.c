@@ -1124,7 +1124,7 @@ void midi_panic (void *inst) {
     oscKeyOff (instp->synth, i, i);
   }
   for (i = 0; i < MAX_CONTACTS; ++i) {
-    oscContactOff(instp->synth, i);
+    oscContactOff(instp->synth, i, 0);
   }
 }
 
@@ -1140,17 +1140,18 @@ void process_midi_event(void *instp, const struct bmidi_event_t *ev) {
         bus = n;
         int contact = make_contact(bus, key);
         //rt_printf("bus: %d, key: %d\n", get_contact_bus(contact), get_contact_key(contact));
+		unsigned short velocity = ev->d.tone.velocity;
         if(m->keyTable[ev->channel] && m->keyTable[ev->channel][ev->d.tone.note] != 255) {
-          if (ev->d.tone.velocity > 0){
+          if (velocity){
 	          //oscKeyOn (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],
 	              //map_to_real_key(m, ev->channel, ev->d.tone.note)
             //);
-            oscContactOn(inst->synth, contact);
+            oscContactOn(inst->synth, contact, velocity);
           } else {
 	          //oscKeyOff (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],
 	              //map_to_real_key(m, ev->channel, ev->d.tone.note)
            //);
-            oscContactOff(inst->synth, contact);
+            oscContactOff(inst->synth, contact, velocity);
           }
         }
       }
@@ -1163,7 +1164,7 @@ void process_midi_event(void *instp, const struct bmidi_event_t *ev) {
 	//os  cKeyOff (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],
 	      //map_to_real_key(m, ev->channel, ev->d.tone.note)
 	      //);
-        oscContactOff(inst->synth, contact);
+        oscContactOff(inst->synth, contact, 0);
       }
       break;
     case PROGRAM_CHANGE:

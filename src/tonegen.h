@@ -25,6 +25,7 @@
 #define TONEGEN_H
 #include <stdbool.h>
 #include <inttypes.h>
+#include "BouncingEnvelope.h"
 
 #define DEBUG_TONEGEN_OSC 1
 int rt_printf(const char *format, ...);
@@ -156,8 +157,9 @@ struct _oscillator {
   size_t  pos;			/**< Read position */
 
 #ifdef LONG_ENVELOPES
-  float* env;
-  float* envEnd;
+  BouncingEnvelope* be;
+  unsigned int remaining;
+  short velocity;
 #endif /* LONG_ENVELOPES */
 
   int     aclPos;		/**< Position in active list */
@@ -290,6 +292,10 @@ CoreIns * coreReader;
 	  */
 #define ENVELOPE_LENGTH ((1024 / BUFFER_SIZE_SAMPLES ) * BUFFER_SIZE_SAMPLES)
 #define RELEASE_ENVELOPE_LENGTH BUFFER_SIZE_SAMPLES
+
+#define NOF_DYNAMIC_ENVELOPES (NOF_WHEELS + 1)
+BouncingEnvelope bes[NOF_DYNAMIC_ENVELOPES];
+float dynamicEnvelopesBuffers[NOF_DYNAMIC_ENVELOPES][BUFFER_SIZE_SAMPLES];
 float attackEnv[NUM_ENVELOPES][ENVELOPE_LENGTH]; /**< Attack envelope buffer for 9 buses */
 float* attackEnvEnd[NUM_ENVELOPES];
 float releaseEnv[NUM_ENVELOPES][RELEASE_ENVELOPE_LENGTH];/**< Release envelope buffer for 9 buses */

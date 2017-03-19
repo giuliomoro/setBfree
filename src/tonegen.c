@@ -1788,8 +1788,7 @@ static void initOscillators (struct b_tonegen *t, int variant, double precision)
 
     osp->lengthSamples = wszs;
 #ifdef LONG_ENVELOPES
-    osp->env = NULL;
-	osp->envEnd = NULL;
+    osp->be = NULL;
 #endif /* LONG_ENVELOPES */
 
     /* Reset the harmonics list to the compile-time value. */
@@ -2808,6 +2807,16 @@ static void initEnvelopes (struct b_tonegen *t) {
 	}
 
   } /* for each envelope buffer */
+
+  //printf("envAttackClickLevel: %.3f\n", t->envAttackClickLevel);
+  //printf("maxLength: %d\n", t->envAtkClkMaxLength);
+  //for(int i = 0; i < t->envAtkClkMinLength; ++i){
+    //printf("env[%4d]  ", i);
+    //for(int b = 0; b < 9; ++b){
+      //printf(" %.1f, ", t->attackEnv[b][i]);
+    //}
+    //printf("\n");
+  //}
 }
 
 /**
@@ -3192,7 +3201,7 @@ void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned 
   if (MAX_CONTACTS <= contactNumber) return;
   /* The key must be marked as on */
   if (t->activeContacts[contactNumber] != 0) {
-    rt_printf("contactOff: %d\n", contactNumber);
+    //rt_printf("contactOff: %d\n", contactNumber);
     /* Flag the contact as inactive */
     t->activeContacts[contactNumber] = 0;
     /* TODO" handle percussion: count active contacts on percussion bus */
@@ -3325,6 +3334,19 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 	  oldPos[n] = pos[n];
 	}
 	static int count = 0;
+	/* auto play */
+	//if(count % 1000 == 0){
+		//oscContactOn(t, 216, 127);
+		//oscContactOn(t, 217, 127);
+	//}
+	//if(count % 1000 == 500){
+		//oscContactOff(t, 217, 0);
+	//}
+	//if(count % 1000 == 501){
+		//oscContactOff(t, 216, 0);
+	//}
+	//if(count % 500 == 0){
+	//}
 	if(count % 70 == 0)
 	{
 		rt_printf("%s ", mute ? "m" : "_");
@@ -3390,13 +3412,14 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
       short velocity = MSG_GET_VELOCITY(msg);
       int busNumber = get_contact_bus(contactNumber);
       int keyNumber = get_contact_key(contactNumber);
-      rt_printf("bus: %d, key: %d\n", get_contact_bus(contactNumber), get_contact_key(contactNumber));
+      //rt_printf("bus: %d, key: %d\n", get_contact_bus(contactNumber), get_contact_key(contactNumber));
       for (lep = t->keyContrib[keyNumber]; lep != NULL; lep = lep->next) {
         if(LE_BUSNUMBER_OF(lep) != busNumber)
           continue;
         int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
         osp = &(t->oscillators[wheelNumber]);
 
+		osp->velocity = velocity;
         if (t->aot[wheelNumber].refCount == 0) {
           /* Flag the oscillator as added and modified */
           osp->rflags = OR_ADD;
@@ -3523,12 +3546,13 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
       /* Put it on the removal list */
       removedList[removedEnd++] = oscNumber;
 #ifdef LONG_ENVELOPES
-      osp->env = NULL;
+	  osp->be = NULL;
 	  aop->sumSwell = 0;
 #endif /* LONG_ENVELOPES */
 			/* All envelopes, both attack and release must traverse 0-1. */
 
       t->coreWriter->env = t->releaseEnv[i & 7];
+	  //rt_printf("Using releaseEnv %d %d\n", i&7, i);
 
       if (copyDone) {
         t->coreWriter->opr = CR_ADDENV;
@@ -3656,28 +3680,26 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 #endif /* LONG_ENVELOPES */
       /* Emit instructions for oscillator */
       if (osp->rflags & OR_ADD) {
-        float* env;
+        float* env = t->dynamicEnvelopesBuffers[oscNumber];
 #ifdef LONG_ENVELOPES
-        env = osp->env;
-        if (env == NULL) { // the envelope is not init'd
+		osp->remaining -= BUFFER_SIZE_SAMPLES;
+        if (osp->be == NULL) { // the envelope is not init'd
+		  osp->be = &t->bes[oscNumber];
+		  BouncingEnvelope_init(osp->be, osp->velocity);
           env = t->attackEnv[i & 7]; // pick one envelope
-          osp->envEnd = env + ENVELOPE_LENGTH;
+	      //rt_printf("Use attackEnv %d %3d\n", i&7, i);
+          osp->remaining = ENVELOPE_LENGTH;
           osp->rflags |= ORF_PERSISTED;
         }
-        else { // the envelope is already init'd
-          env += BUFFER_SIZE_SAMPLES; // increment it 
-        }
-        if(env) { //the envelope is already active
-          int remaining = (osp->envEnd - env) - BUFFER_SIZE_SAMPLES;
+        if(osp->be) { //the envelope is already active
+          int remaining = (osp->remaining) - BUFFER_SIZE_SAMPLES;
           if (remaining <= 0) { // the envelope is completed
             envelopeCompleted = 1; 
-            osp->env = NULL; // deactivate it
+            osp->be = NULL; // deactivate it
             osp->rflags &= ~ORF_PERSISTED; // forget about it
           }
-          else { //remember current envelope
-            osp->env = env;
-          }
         }
+		BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env);
 #else
         env = t->attackEnv[i & 7];
 #endif /* LONG_ENVELOPES */

@@ -505,8 +505,10 @@ static void initValues (struct b_tonegen *t) {
   t->contactClosingDistance = computeClosingDistance(61, 9, 0.2, 0.4, 0);
   // initialize previous reading of scanner keys
   // to "fully up", so to avoid starting with 549 offsets
-  for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
-    t->oldPos[n] = 1;
+  for(int k = 0; k < NUM_OLD_POS; ++k){
+    for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
+      t->oldPos[k][n] = 1;
+    }
   }
 #endif /* INDIVIDUAL_CONTACTS */
 
@@ -3302,7 +3304,8 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
   {
 	Keys* keys = t->keys;
 	float* pos = t->pos;
-	float* oldPos = t->oldPos;
+	float* oldPos = t->oldPos[t->oldPosCurr];
+	float* oldOldPos = t->oldPos[(t->oldPosCurr + 1) % NUM_OLD_POS];
 	float** contactClosingDistance = t->contactClosingDistance;
     for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
       pos[n] = Keys_getNoteValue(keys, n + 24);
@@ -3321,17 +3324,25 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
         if(pos[n] <= threshold && oldPos[n] > threshold)
         { // contact was inactive, we need to turn it on
           int contact = make_contact(bus, playingKey);
-          oscContactOn(t, contact, 99);
+          float rawVelocity = -(pos[n] - oldOldPos[n]);
+          short velocity = (rawVelocity) * 170;
+          oscContactOn(t, contact, velocity);
         }
         else if(pos[n] > threshold && oldPos[n] <= threshold)
         { // contact was active, we need to turn it off
           int contact = make_contact(bus, playingKey);
-          oscContactOff(t, contact, 10);
+          float rawVelocity = -(pos[n] - oldOldPos[n]);
+          short velocity = (rawVelocity) * 170;
+          oscContactOff(t, contact, velocity);
         }
       }
 	}
+	++t->oldPosCurr;
+	if(t->oldPosCurr == NUM_OLD_POS)
+		t->oldPosCurr = 0;
+	// remember current position
     for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
-	  oldPos[n] = pos[n];
+	  t->oldPos[t->oldPosCurr][n] = pos[n];
 	}
 	static int count = 0;
 	/* auto play */
@@ -3452,6 +3463,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
           continue;
         int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
         osp = &(t->oscillators[wheelNumber]);
+i       osp->velocity = velocity;
 
         t->aot[wheelNumber].busLevel[LE_BUSNUMBER_OF(lep)] -= LE_LEVEL_OF(lep);
         t->aot[wheelNumber].keyCount[LE_BUSNUMBER_OF(lep)] -= 1;

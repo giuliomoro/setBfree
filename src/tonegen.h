@@ -380,9 +380,11 @@ bool activeContacts [MAX_CONTACTS];
 float pos[96];
 
 /*
- * Previous position of each key
+ * Previous positions of each key
  */
-float oldPos[96];
+#define NUM_OLD_POS 5
+float oldPos[NUM_OLD_POS][96];
+int oldPosCurr;
 
 /*
  * Array containing closing distance for each bus for each key

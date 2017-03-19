@@ -57,6 +57,7 @@ PREBUILT=build/src/midi.o \
         build/src/pgmParser.o \
         build/src/memstream.o \
         build/src/midnam.o \
+		build/src/BouncingEnvelope.o \
         build/b_whirl/eqcomp.o\
         build/b_whirl/whirl.o \
         build/b_overdrive/overdrive.o \

@@ -217,7 +217,6 @@
 
 
 #include <native/timer.h>
-#include <WriteFile_c.h>
 int gShouldStop = 0; // TODO: get rid of this when BelaExtra API improves
 #ifndef CONFIGDOCONLY
 
@@ -921,16 +920,88 @@ static double taperingModel (int key, int bus) {
 
 static void postCallback(void* arg, float* buffer, unsigned int length)
 {
+	struct b_tonegen* t = (struct b_tonegen*)arg;
 	static RTIME start = 0;
 	if(start == 0)
 		start = rt_timer_read();
-	WriteFile* file = (WriteFile*)arg;
+	WriteFile* file = t->sensorLogFile;
 	//rt_printf("buffer: %p, length: %u\n", buffer, length);
 	RTIME time = rt_timer_read() - start;
 	float timef = (time >> 6) * 0.000001;
 	int offset = 12;
 	WriteFile_log(file, timef);
 	WriteFile_logArray(file, buffer+offset, length-offset);
+  int mute = 0;
+  {
+	Keys* keys = t->keys;
+	float* pos = t->pos;
+	float* oldPos = t->oldPos[t->oldPosCurr];
+	float* oldOldPos = t->oldPos[(t->oldPosCurr + 1) % NUM_OLD_POS];
+	float** contactClosingDistance = t->contactClosingDistance;
+    for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
+      pos[n] = Keys_getNoteValue(keys, n + 24);
+    }
+    for(int n = 10; n < FIRST_SOUNDING_KEY; ++n){
+	  // if using one of the presets,
+	  // do not generate output
+      if(pos[n] < 0.5)
+        mute = 1;
+    }
+    for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n){
+      for(int bus = 0; bus < NOF_DRAWBARS_PER_MANUAL ; ++bus)
+      {
+        int playingKey = n - FIRST_SOUNDING_KEY;
+        float threshold = contactClosingDistance[playingKey][bus];
+        if(pos[n] <= threshold && oldPos[n] > threshold)
+        { // contact was inactive, we need to turn it on
+          int contact = make_contact(bus, playingKey);
+          float rawVelocity = -(pos[n] - oldOldPos[n]);
+          short velocity = (rawVelocity) * 170;
+          oscContactOn(t, contact, velocity);
+        }
+        else if(pos[n] > threshold && oldPos[n] <= threshold)
+        { // contact was active, we need to turn it off
+          int contact = make_contact(bus, playingKey);
+          float rawVelocity = -(pos[n] - oldOldPos[n]);
+          short velocity = (rawVelocity) * 170;
+          oscContactOff(t, contact, velocity);
+        }
+      }
+	}
+	++t->oldPosCurr;
+	if(t->oldPosCurr == NUM_OLD_POS)
+		t->oldPosCurr = 0;
+	// remember current position
+    for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
+	  t->oldPos[t->oldPosCurr][n] = pos[n];
+	}
+	static int count = 0;
+	t->mute = mute;
+	/* auto play */
+	if(0)
+	{
+		if(count % 1000 == 0){
+			static int state  = 0;
+			oscContactOn(t, 216, 1 + (126 * state));
+			oscContactOn(t, 217, 1 + (126 * state));
+			state = !state;
+		}
+		if(count % 1000 == 500){
+			oscContactOff(t, 217, 0);
+		}
+		if(count % 1000 == 500){
+			oscContactOff(t, 216, 0);
+		}
+	}
+	if(count % 300 == 0)
+	{
+		rt_printf("%s ", mute ? "m" : "_");
+		for(int n = 10; n < TOTAL_SCANNER_KEYS; ++n)
+			rt_printf("%2d ", (int)(pos[n]*10));
+		rt_printf("\n");
+	}
+	count++;
+  }
 }
 
 static void startKeyboardScanning(struct b_tonegen *t){
@@ -955,8 +1026,8 @@ static void startKeyboardScanning(struct b_tonegen *t){
   WriteFile* file = WriteFile_new();
   WriteFile_init(file, "sensor_log.bin");
   WriteFile_setFileType(file, kBinary);
-  //TODO: delete WriteFile
-  Keys_setPostCallback(t->keys, postCallback, file);
+  t->sensorLogFile = file;
+  Keys_setPostCallback(t->keys, postCallback, t);
 }
 /**
  * Applies the built-in default model to the manual tapering and crosstalk.
@@ -3125,6 +3196,7 @@ void freeListElements (ListElement *lep) {
 void freeToneGenerator (struct b_tonegen *t) {
   freeListElements(t->leConfig);
   freeListElements(t->leRuntime);
+  WriteFile_delete(t->sensorLogFile);
   int i;
   for (i=1; i <= NOF_WHEELS; i++) {
     if (t->oscillators[i].wave) free(t->oscillators[i].wave);
@@ -3300,78 +3372,6 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned s
  */
 void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples) {
   
-  int mute = t->mute;
-  {
-	Keys* keys = t->keys;
-	float* pos = t->pos;
-	float* oldPos = t->oldPos[t->oldPosCurr];
-	float* oldOldPos = t->oldPos[(t->oldPosCurr + 1) % NUM_OLD_POS];
-	float** contactClosingDistance = t->contactClosingDistance;
-    for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
-      pos[n] = Keys_getNoteValue(keys, n + 24);
-    }
-    for(int n = 10; n < FIRST_SOUNDING_KEY; ++n){
-	  // if using one of the presets,
-	  // do not generate output
-      if(pos[n] < 0.5)
-        mute = 1;
-    }
-    for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n){
-      for(int bus = 0; bus < NOF_DRAWBARS_PER_MANUAL ; ++bus)
-      {
-        int playingKey = n - FIRST_SOUNDING_KEY;
-        float threshold = contactClosingDistance[playingKey][bus];
-        if(pos[n] <= threshold && oldPos[n] > threshold)
-        { // contact was inactive, we need to turn it on
-          int contact = make_contact(bus, playingKey);
-          float rawVelocity = -(pos[n] - oldOldPos[n]);
-          short velocity = (rawVelocity) * 170;
-          oscContactOn(t, contact, velocity);
-        }
-        else if(pos[n] > threshold && oldPos[n] <= threshold)
-        { // contact was active, we need to turn it off
-          int contact = make_contact(bus, playingKey);
-          float rawVelocity = -(pos[n] - oldOldPos[n]);
-          short velocity = (rawVelocity) * 170;
-          oscContactOff(t, contact, velocity);
-        }
-      }
-	}
-	++t->oldPosCurr;
-	if(t->oldPosCurr == NUM_OLD_POS)
-		t->oldPosCurr = 0;
-	// remember current position
-    for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
-	  t->oldPos[t->oldPosCurr][n] = pos[n];
-	}
-	static int count = 0;
-	/* auto play */
-	if(0)
-	{
-		if(count % 1000 == 0){
-			static int state  = 0;
-			oscContactOn(t, 216, 1 + (126 * state));
-			oscContactOn(t, 217, 1 + (126 * state));
-			state = !state;
-		}
-		if(count % 1000 == 500){
-			oscContactOff(t, 217, 0);
-		}
-		if(count % 1000 == 500){
-			oscContactOff(t, 216, 0);
-		}
-	}
-	if(count % 70 == 0)
-	{
-		rt_printf("%s ", mute ? "m" : "_");
-		for(int n = 10; n < TOTAL_SCANNER_KEYS; ++n)
-			rt_printf("%2d ", (int)(pos[n]*10));
-		rt_printf("\n");
-	}
-	count++;
-  }
-
-
   int i;
   float * yptr = buf;
   struct _oscillator * osp;
@@ -3937,7 +3937,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
   /* Mix buffers, applying percussion and swell pedal. */
 
-  if(mute)
+  if(t->mute)
   {
 	for (i = 0; i < BUFFER_SIZE_SAMPLES; i++) { /* Mute */
 	  *yptr++ = 0;

@@ -26,6 +26,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include "BouncingEnvelope.h"
+#include <WriteFile_c.h>
 
 #define DEBUG_TONEGEN_OSC 1
 int rt_printf(const char *format, ...);
@@ -642,6 +643,7 @@ float pz;
 #endif
 
 struct b_vibrato inst_vibrato;
+WriteFile* sensorLogFile;
 };
 
 extern void setToneGeneratorModel (struct b_tonegen *t, int variant);

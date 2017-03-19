@@ -14,7 +14,7 @@ void BouncingEnvelope_init(BouncingEnvelope* be, short velocity)
 	be->contactPosition = be->amplitude;
 	be->highThreshold = 0.2;
 	be->lowThreshold = 0.015;
-	be->phase = 0;
+	be->phase = M_PI / 2;
 	be->phaseStep = 0.0907;
 	be->e = 0.3;
 	be->samplesSinceLastTransition = 0;
@@ -33,7 +33,7 @@ void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buf
 	float contactPosition;
 	for(int n = 0; n < length; ++n)
 	{
-		contactPosition = amplitude * cosf_neon(phase);
+		contactPosition = amplitude * sinf_neon(phase);
 		if (contactPositionPrev > 0 && contactPosition < 0)
 		{
 			// changed direction, start a new oscillation

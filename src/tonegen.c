@@ -3463,7 +3463,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
           continue;
         int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
         osp = &(t->oscillators[wheelNumber]);
-i       osp->velocity = velocity;
+        osp->velocity = velocity;
 
         t->aot[wheelNumber].busLevel[LE_BUSNUMBER_OF(lep)] -= LE_LEVEL_OF(lep);
         t->aot[wheelNumber].keyCount[LE_BUSNUMBER_OF(lep)] -= 1;
@@ -3567,7 +3567,7 @@ i       osp->velocity = velocity;
 			/* All envelopes, both attack and release must traverse 0-1. */
 
       t->coreWriter->env = t->releaseEnv[i & 7];
-	  rt_printf("Using releaseEnv %d %d\n", i&7, i);
+	  //rt_printf("Using releaseEnv %d %d\n", i&7, i);
 
       if (copyDone) {
         t->coreWriter->opr = CR_ADDENV;
@@ -3701,7 +3701,7 @@ i       osp->velocity = velocity;
         if (osp->be == NULL) { // the envelope is not init'd
 		  osp->be = &t->bes[oscNumber];
 		  BouncingEnvelope_init(osp->be, osp->velocity);
-	      rt_printf("Use attackEnv %3d, velocity: %d\n", i, osp->velocity);
+	      //rt_printf("Use attackEnv %3d, velocity: %d\n", i, osp->velocity);
           osp->remaining = ENVELOPE_LENGTH;
           osp->rflags |= ORF_PERSISTED;
         }

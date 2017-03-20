@@ -947,36 +947,39 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
       if(pos[n] < 0.5)
         mute = 1;
     }
-    for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n){
-      for(int bus = 0; bus < NOF_DRAWBARS_PER_MANUAL ; ++bus)
-      {
-        int playingKey = n - FIRST_SOUNDING_KEY;
-        float threshold = contactClosingDistance[playingKey][bus];
-        if(pos[n] <= threshold && oldPos[n] > threshold)
-        { // contact was inactive, we need to turn it on
-          int contact = make_contact(bus, playingKey);
-          float rawVelocity = -(pos[n] - oldOldPos[n]);
-          short velocity = (rawVelocity) * 170;
-          oscContactOn(t, contact, velocity);
+	if(t->started){
+      for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n){
+        for(int bus = 0; bus < NOF_DRAWBARS_PER_MANUAL ; ++bus)
+        {
+          int playingKey = n - FIRST_SOUNDING_KEY;
+          float threshold = contactClosingDistance[playingKey][bus];
+          if(pos[n] <= threshold && oldPos[n] > threshold)
+          { // contact was inactive, we need to turn it on
+            int contact = make_contact(bus, playingKey);
+            float rawVelocity = -(pos[n] - oldOldPos[n]);
+            short velocity = (rawVelocity) * 170;
+            oscContactOn(t, contact, velocity);
+          }
+          else if(pos[n] > threshold && oldPos[n] <= threshold)
+          { // contact was active, we need to turn it off
+            int contact = make_contact(bus, playingKey);
+            float rawVelocity = -(pos[n] - oldOldPos[n]);
+            short velocity = (rawVelocity) * 170;
+            oscContactOff(t, contact, velocity);
+          }
         }
-        else if(pos[n] > threshold && oldPos[n] <= threshold)
-        { // contact was active, we need to turn it off
-          int contact = make_contact(bus, playingKey);
-          float rawVelocity = -(pos[n] - oldOldPos[n]);
-          short velocity = (rawVelocity) * 170;
-          oscContactOff(t, contact, velocity);
-        }
+	  }
+      ++t->oldPosCurr;
+      if(t->oldPosCurr == NUM_OLD_POS)
+      	t->oldPosCurr = 0;
+      // remember current position
+      for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
+        t->oldPos[t->oldPosCurr][n] = pos[n];
       }
-	}
-	++t->oldPosCurr;
-	if(t->oldPosCurr == NUM_OLD_POS)
-		t->oldPosCurr = 0;
-	// remember current position
-    for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
-	  t->oldPos[t->oldPosCurr][n] = pos[n];
-	}
+      t->mute = mute;
+    }
+
 	static int count = 0;
-	t->mute = mute;
 	/* auto play */
 	if(0)
 	{
@@ -3372,6 +3375,8 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned s
  */
 void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples) {
   
+  if(!t->started)
+    t->started = 1;
   int i;
   float * yptr = buf;
   struct _oscillator * osp;

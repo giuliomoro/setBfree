@@ -53,7 +53,7 @@ int rt_printf(const char *format, ...);
 
 #define NOF_BUSES 27		/* Nof of drawbars/buses */
 
-#define BUFFER_SIZE_SAMPLES 128
+#define BUFFER_SIZE_SAMPLES 64
 
 // Message
 typedef uint32_t msg_queue_t;
@@ -644,6 +644,7 @@ float pz;
 
 struct b_vibrato inst_vibrato;
 WriteFile* sensorLogFile;
+int started;
 };
 
 extern void setToneGeneratorModel (struct b_tonegen *t, int variant);

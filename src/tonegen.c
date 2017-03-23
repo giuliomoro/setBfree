@@ -378,31 +378,36 @@ int gShouldStop = 0; // TODO: get rid of this when BelaExtra API improves
 #define NOF_DRAWBARS_PER_MANUAL 9
 #endif
 
-static float** computeClosingDistance(unsigned int keys, unsigned int busbars, float min, float max,unsigned int seed)
+static void computeClosingDistance(struct b_tonegen* t, unsigned int keys, unsigned int busbars, float min, float max,unsigned int seed)
 {
 	srand(seed);
-	float** arr = (float**)malloc(keys * sizeof(float*));
-	if(arr == NULL)
-	{
-		fprintf(stderr, "Error while allocating\n");
-		exit(1);
-	}
+	float** arr = t->contactClosingDistance;
 	for(unsigned int k = 0; k < keys; ++k)
 	{
-		arr[k] = (float*)malloc(busbars * sizeof(float));
-		if(arr[k] == NULL)
-		{
-			fprintf(stderr, "Error while allocating\n");
-			exit(1);
-		}
 		for(unsigned int b = 0; b < busbars; ++b)
 		{
 			arr[k][b] = rand()/(float)RAND_MAX * (max-min) + min;
-			//printf("%.2f ", arr[k][b]);
 		}
 	}
-	return arr;
 }
+
+static void contactsSpreadHandler(void *d, unsigned char u)
+{
+	struct b_tonegen *t = (struct b_tonegen *)d;
+	if(u < 40){
+		printf("Changing closing distance: zero\n");
+		computeClosingDistance(t, 61, 9, 0.3, 0.305, 0);
+	}
+	else if(u >= 40 && u < 80){
+		printf("Changing closing distance: normal\n");
+		computeClosingDistance(t, 61, 9, 0.2, 0.4, 0);
+	}
+	else if(u > 80){
+		printf("Changing closing distance: wide\n");
+		computeClosingDistance(t, 61, 9, 0.05, 0.85, 0);
+	}
+}
+
 
 static void initValues (struct b_tonegen *t) {
   t->leConfig = NULL;
@@ -501,7 +506,24 @@ static void initValues (struct b_tonegen *t) {
   t->outputGain = 1.0;
 
 #ifdef INDIVIDUAL_CONTACTS
-  t->contactClosingDistance = computeClosingDistance(61, 9, 0.2, 0.4, 0);
+	int keys = 61;
+	int busbars = 9;
+	t->contactClosingDistance = (float**)malloc(keys * sizeof(float*));
+	if(t->contactClosingDistance == NULL)
+	{
+		fprintf(stderr, "Error while allocating\n");
+		exit(1);
+	}
+	for(unsigned int k = 0; k < keys; ++k)
+	{
+		t->contactClosingDistance[k] = (float*)malloc(busbars * sizeof(float));
+		if(t->contactClosingDistance[k] == NULL)
+		{
+			fprintf(stderr, "Error while allocating\n");
+			exit(1);
+		}
+	}
+   computeClosingDistance(t, 61, 9, 0.2, 0.4, 0);
   // initialize previous reading of scanner keys
   // to "fully up", so to avoid starting with 549 offsets
   for(int k = 0; k < NUM_OLD_POS; ++k){
@@ -3181,6 +3203,7 @@ void initToneGenerator (struct b_tonegen *t, void *m) {
   useMIDIControlFunction (m, "percussion.volume",   setPercVolumeFromMIDI, t);
 
   useMIDIControlFunction (m, "volume.mute", toggleMute, t);
+  useMIDIControlFunction (m, "contacts.spread", contactsSpreadHandler, t);
 
 #if DEBUG_TONEGEN_OSC
   dumpOscToText (t, "osc.txt");

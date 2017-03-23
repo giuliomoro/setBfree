@@ -163,6 +163,7 @@ static const char * ccFuncNames[] = {
   "convolution.mix",
 
   "volume.mute",
+  "contacts.spread",
 
   NULL
 };
@@ -860,6 +861,7 @@ void midiPrimeControllerMapping (void *mcfg) {
   loadCCMap (m, "whirl.horn.filter.a.q",    29, m->ctrlUseA, NULL, NULL);
   loadCCMap (m, "whirl.horn.filter.a.gain", 30, m->ctrlUseA, NULL, NULL);
   loadCCMap (m, "volume.mute", 31, m->ctrlUseA, m->ctrlUseB, m->ctrlUseC);
+  loadCCMap (m, "contacts.spread", 32, m->ctrlUseA, m->ctrlUseB, m->ctrlUseC);
 
   /* 32-63 are least significant bits of controller 0-31 */
 
@@ -919,7 +921,6 @@ void midiPrimeControllerMapping (void *mcfg) {
 
   loadCCMap (m, "overdrive.character",   93, m->ctrlUseA, NULL, NULL);
 
-  loadCCMap (m, "convolution.mix", 94, m->ctrlUseA, NULL, NULL);
   loadCCMap (m, "convolution.mix", 94, m->ctrlUseA, NULL, NULL);
 }
 

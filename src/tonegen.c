@@ -1027,7 +1027,7 @@ static void startKeyboardScanning(struct b_tonegen *t){
   Keys_startTopCalibration(t->keys);
   Keys_loadCalibrationFile(t->keys, "/root/spi-pru/out.txt");
   WriteFile* file = WriteFile_new();
-  WriteFile_init(file, "sensor_log.bin");
+  WriteFile_init(file, "sensor_log.bin", false);
   WriteFile_setFileType(file, kBinary);
   t->sensorLogFile = file;
   Keys_setPostCallback(t->keys, postCallback, t);

@@ -644,7 +644,8 @@ float pz;
 
 struct b_vibrato inst_vibrato;
 WriteFile* sensorLogFile;
-int started;
+WriteFile* audioLogFile;
+int elapsedSamples;
 };
 
 extern void setToneGeneratorModel (struct b_tonegen *t, int variant);

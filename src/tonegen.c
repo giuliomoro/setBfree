@@ -948,8 +948,9 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 		start = rt_timer_read();
 	WriteFile* file = t->sensorLogFile;
 	//rt_printf("buffer: %p, length: %u\n", buffer, length);
-	RTIME time = rt_timer_read() - start;
-	float timef = (time >> 6) * 0.000001;
+	//RTIME time = rt_timer_read() - start;
+	//float timef = (time >> 6) * 0.000001;
+	float timef = t->elapsedSamples;
 	int offset = 12;
 	WriteFile_log(file, timef);
 	WriteFile_logArray(file, buffer+offset, length-offset);
@@ -969,7 +970,7 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
       if(pos[n] < 0.5)
         mute = 1;
     }
-	if(t->started){
+	if(t->elapsedSamples){
       for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n){
         for(int bus = 0; bus < NOF_DRAWBARS_PER_MANUAL ; ++bus)
         {
@@ -1048,11 +1049,19 @@ static void startKeyboardScanning(struct b_tonegen *t){
   }
   Keys_startTopCalibration(t->keys);
   Keys_loadCalibrationFile(t->keys, "/root/spi-pru/out.txt");
-  WriteFile* file = WriteFile_new();
-  WriteFile_init(file, "sensor_log.bin", false);
-  WriteFile_setFileType(file, kBinary);
-  t->sensorLogFile = file;
-  Keys_setPostCallback(t->keys, postCallback, t);
+  {
+	  WriteFile* file = WriteFile_new();
+	  WriteFile_init(file, "sensor_log.bin", false);
+	  WriteFile_setFileType(file, kBinary);
+	  t->sensorLogFile = file;
+	  Keys_setPostCallback(t->keys, postCallback, t);
+  }
+  { 
+	  WriteFile* file = WriteFile_new();
+	  WriteFile_init(file, "audio_log.bin", false);
+	  WriteFile_setFileType(file, kBinary);
+	  t->audioLogFile = file;
+  }
 }
 /**
  * Applies the built-in default model to the manual tapering and crosstalk.
@@ -3398,8 +3407,7 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned s
  */
 void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples) {
   
-  if(!t->started)
-    t->started = 1;
+  t->elapsedSamples += lengthSamples;
   int i;
   float * yptr = buf;
   struct _oscillator * osp;
@@ -4028,6 +4036,7 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
     t->percEnvGain = t->percEnvGainReset;
   }
 
+  WriteFile_logArray(t->audioLogFile, buf, lengthSamples);
 } /* oscGenerateFragment */
 
 

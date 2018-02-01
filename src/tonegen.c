@@ -217,7 +217,7 @@
 
 
 #include <native/timer.h>
-int gShouldStop = 0; // TODO: get rid of this when BelaExtra API improves
+extern int gShouldStop;
 #ifndef CONFIGDOCONLY
 
 #define _XOPEN_SOURCE 700
@@ -1332,7 +1332,6 @@ static void applyDefaultConfiguration (struct b_tonegen *t) {
    * still benefit from the crosstalk modelled for the tonegenerator
    * terminals.
    */
-  startKeyboardScanning(t);
 
 } /* applyDefaultConfiguration */
 
@@ -3217,6 +3216,7 @@ void initToneGenerator (struct b_tonegen *t, void *m) {
 #if DEBUG_TONEGEN_OSC
   dumpOscToText (t, "osc.txt");
 #endif
+  startKeyboardScanning(t);
 }
 
 void freeListElements (ListElement *lep) {
@@ -3229,9 +3229,12 @@ void freeListElements (ListElement *lep) {
 }
 
 void freeToneGenerator (struct b_tonegen *t) {
+  gShouldStop = 1;
   freeListElements(t->leConfig);
   freeListElements(t->leRuntime);
+  Keys_stopAndWait(t->keys);
   WriteFile_delete(t->sensorLogFile);
+  WriteFile_delete(t->audioLogFile);
   int i;
   for (i=1; i <= NOF_WHEELS; i++) {
     if (t->oscillators[i].wave) free(t->oscillators[i].wave);

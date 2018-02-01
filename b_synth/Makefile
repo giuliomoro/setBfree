@@ -2,7 +2,7 @@ MODNAME=setBfree
 include ../common.mak
 include ../git2lv2.mk
 
-LOADLIBES = /root/Bela/lib/libmathneon.a /root/Bela/build/libbelaextra.a -lm `/usr/xenomai/bin/xeno-config --skin native --ldflags`
+LOADLIBES = /root/Bela/lib/libmathneon.a -lm `/usr/xenomai/bin/xeno-config --skin native --ldflags`
 override CFLAGS+= -I/root/Bela/include -I../src -I../b_overdrive -I../b_reverb -I../b_whirl -DJACK_DESCRIPT -I/root/spi-pru  `/usr/xenomai/bin/xeno-config --skin=native --cflags`
 override CFLAGS+=`pkg-config --cflags lv2` -DLV2SYNTH -fvisibility=hidden
 targets=
@@ -70,7 +70,7 @@ build/%.o: ../%.c ../src/tonegen.h ../src/contacts.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIC_CFLAGS) \
 		-c -MMD -MP -MF"$(@:%.o=%.d)" -o "$@" "$<" 
 #SPI_PRU_OBJS=/root/spi-pru/libkeys.a -L/root/am335x_pru_package/pru_sw/app_loader/lib -lprussdrv
-SPI_PRU_OBJS=-lkeys -L/root/am335x_pru_package/pru_sw/app_loader/lib -lprussdrv -L/root/spi-pru
+SPI_PRU_OBJS=-lbelaextra -L/root/Bela/lib/ -lkeys -L/root/am335x_pru_package/pru_sw/app_loader/lib -lprussdrv -L/root/spi-pru
 
 $(LV2NAME)$(LIB_EXT): uris.h ../src/cfgParser.h ../src/midi.h $(PREBUILT)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIC_CFLAGS) \

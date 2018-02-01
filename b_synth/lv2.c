@@ -154,7 +154,7 @@ double SampleRateD = 48000.0;
 
 void initSynth(struct b_instance *inst, double rate) {
   // equivalent to ../src/main.c main()
-  unsigned int defaultPreset[9] = {8,8,6, 0,0,0,0, 0,0};
+  unsigned int defaultPreset[9] = {6,6,6, 6,6,6,6, 6,6};
 
   /* initAll() */
   initToneGenerator (inst->synth, inst->midicfg);
@@ -246,13 +246,15 @@ static uint32_t synthSound (B3S *instance, uint32_t written, uint32_t nframes, f
 
     if (b3s->boffset >= BUFFER_SIZE_SAMPLES)  {
       b3s->boffset = 0;
-      oscGenerateFragment (instance->inst->synth, b3s->bufA, BUFFER_SIZE_SAMPLES);
-      preamp (instance->inst->preamp, b3s->bufA, b3s->bufB, BUFFER_SIZE_SAMPLES);
-      reverb (instance->inst->reverb, b3s->bufB, b3s->bufC, BUFFER_SIZE_SAMPLES);
+      oscGenerateFragment (instance->inst->synth, b3s->bufL[0], BUFFER_SIZE_SAMPLES);
+	  memcpy(b3s->bufL[1], b3s->bufL[0], BUFFER_SIZE_SAMPLES*sizeof(float));
+      //oscGenerateFragment (instance->inst->synth, b3s->bufA, BUFFER_SIZE_SAMPLES);
+      //preamp (instance->inst->preamp, b3s->bufA, b3s->bufB, BUFFER_SIZE_SAMPLES);
+      //reverb (instance->inst->reverb, b3s->bufB, b3s->bufC, BUFFER_SIZE_SAMPLES);
 #ifdef WITH_SIGNATURE
       scramble (b3s, b3s->bufC, BUFFER_SIZE_SAMPLES);
 #endif
-      whirlProc3(instance->inst->whirl, b3s->bufC, b3s->bufL[0], b3s->bufL[1], b3s->bufD[0], b3s->bufD[1], BUFFER_SIZE_SAMPLES);
+      //whirlProc3(instance->inst->whirl, b3s->bufC, b3s->bufL[0], b3s->bufL[1], b3s->bufD[0], b3s->bufD[1], BUFFER_SIZE_SAMPLES);
 
     }
 
@@ -1055,7 +1057,7 @@ static void
 activate(LV2_Handle instance)
 {
   B3S* b3s = (B3S*)instance;
-  b3s->queue_panic = 1;
+  b3s->queue_panic = 0;
 }
 
 static void

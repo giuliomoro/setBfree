@@ -69,7 +69,8 @@ build/%.o: ../%.c ../src/tonegen.h ../src/contacts.h
 	@mkdir -p $(dir $@ )
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIC_CFLAGS) \
 		-c -MMD -MP -MF"$(@:%.o=%.d)" -o "$@" "$<" 
-SPI_PRU_OBJS=/root/spi-pru/libkeys.a -L/root/am335x_pru_package/pru_sw/app_loader/lib -lprussdrv
+#SPI_PRU_OBJS=/root/spi-pru/libkeys.a -L/root/am335x_pru_package/pru_sw/app_loader/lib -lprussdrv
+SPI_PRU_OBJS=-lkeys -L/root/am335x_pru_package/pru_sw/app_loader/lib -lprussdrv -L/root/spi-pru
 
 $(LV2NAME)$(LIB_EXT): uris.h ../src/cfgParser.h ../src/midi.h $(PREBUILT)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIC_CFLAGS) \

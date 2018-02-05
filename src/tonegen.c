@@ -961,8 +961,18 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 	float* oldPos = t->oldPos[t->oldPosCurr];
 	float* oldOldPos = t->oldPos[(t->oldPosCurr + 1) % NUM_OLD_POS];
 	float** contactClosingDistance = t->contactClosingDistance;
+	int notZero = 0;
     for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
       pos[n] = Keys_getNoteValue(keys, n + 24);
+      if(pos[n] != 0)
+        ++notZero;
+    }
+    if(!notZero)
+    {
+        // no keyboard connected
+        for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
+            pos[n] = 1;
+        }
     }
     for(int n = 10; n < FIRST_SOUNDING_KEY; ++n){
 	  // if using one of the presets,
@@ -1022,6 +1032,7 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 	if(count % 300 == 0)
 	{
 		rt_printf("%s ", mute ? "m" : "_");
+		rt_printf("%s ", notZero ? "" : "NO_SCANNER_CONNECTED");
 		for(int n = 10; n < TOTAL_SCANNER_KEYS; ++n)
 			rt_printf("%2d ", (int)(pos[n]*10));
 		rt_printf("\n");

@@ -2856,6 +2856,7 @@ static void initEnvelopes (struct b_tonegen *t) {
     }
 
     if (t->envReleaseModel == ENV_CLICK) {
+      int bss = RELEASE_ENVELOPE_LENGTH;
       burst = 8 + (rand () % 32);
       start = (rand () % (bss - burst));
 
@@ -2866,8 +2867,8 @@ static void initEnvelopes (struct b_tonegen *t) {
       for (; i < bss; i++) t->releaseEnv[b][i] = 1.0;
       /* Filter the envelope */
       t->releaseEnv[b][0] /= 2.0;
-      for (i = 1; i < bss; i++) {
-        t->releaseEnv[b][i] = (t->releaseEnv[b][i-1] + t->releaseEnv[b][i]) / 2.0;
+      for (i = 1; i < bss - 1; i++) {
+        t->releaseEnv[b][i] = (t->releaseEnv[b][i-1] + t->releaseEnv[b][i]) * 0.5f;
       }
     }
 

@@ -67,7 +67,9 @@ typedef enum {
   B3S_MIDIIN = 0,
   B3S_MIDIOUT,
   B3S_OUTL,
-  B3S_OUTR
+  B3S_OUTR,
+  B3S_INL,
+  B3S_INR,
 } PortIndex;
 
 typedef struct {
@@ -78,6 +80,8 @@ typedef struct {
 
   const LV2_Atom_Sequence* midiin;
   LV2_Atom_Sequence* midiout;
+  const float* inL;
+  const float* inR;
   float* outL;
   float* outR;
 
@@ -245,9 +249,18 @@ static uint32_t synthSound (B3S *instance, uint32_t written, uint32_t nframes, f
     int nremain = nframes - written;
 
     if (b3s->boffset >= BUFFER_SIZE_SAMPLES)  {
+      for(int n = 0; n < BUFFER_SIZE_SAMPLES; ++n)
+      {
+        b3s->bufL[0][n] = b3s->inL[n];
+        b3s->bufL[1][n] = b3s->inR[n];
+      }
       b3s->boffset = 0;
-      oscGenerateFragment (instance->inst->synth, b3s->bufL[0], BUFFER_SIZE_SAMPLES);
-	  memcpy(b3s->bufL[1], b3s->bufL[0], BUFFER_SIZE_SAMPLES*sizeof(float));
+      float* bufs[2] = {b3s->bufL[0], b3s->bufL[1]};
+      // send in two buffers of inputs. oscGenerateFragment will 
+      // spit out the two summed up in the second buffer, and the organ
+      // sound on the first channel
+      oscGenerateFragment (instance->inst->synth, bufs, BUFFER_SIZE_SAMPLES);
+      //memcpy(b3s->bufL[1], b3s->bufL[0], BUFFER_SIZE_SAMPLES*sizeof(float));
       //oscGenerateFragment (instance->inst->synth, b3s->bufA, BUFFER_SIZE_SAMPLES);
       //preamp (instance->inst->preamp, b3s->bufA, b3s->bufB, BUFFER_SIZE_SAMPLES);
       //reverb (instance->inst->reverb, b3s->bufB, b3s->bufC, BUFFER_SIZE_SAMPLES);
@@ -1049,6 +1062,12 @@ connect_port(LV2_Handle instance,
       break;
     case B3S_OUTR:
       b3s->outR = (float*)data;
+      break;
+    case B3S_INL:
+      b3s->inL = (const float*)data;
+      break;
+    case B3S_INR:
+      b3s->inR = (const float*)data;
       break;
   }
 }

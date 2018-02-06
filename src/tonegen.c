@@ -3420,8 +3420,16 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned s
  * there are changes to be made, and human fingers are typically quite
  * slow. Sequencers, however, may put some strain on things.
  */
-void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples) {
-  
+void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSamples) {
+  // mix inputs to mono and store in the second channel
+  if(bufs[1])
+  {
+    for(int n = 0; n < lengthSamples; ++n)
+    {
+      bufs[1][n] = (bufs[0][n] + bufs[1][n]) * 0.5f;
+    }
+  }
+  float* buf = bufs[0]; // left channel is where the organ sound goes
   t->elapsedSamples += lengthSamples;
   int i;
   float * yptr = buf;

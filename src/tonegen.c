@@ -942,18 +942,7 @@ static double taperingModel (int key, int bus) {
 
 static void postCallback(void* arg, float* buffer, unsigned int length)
 {
-	struct b_tonegen* t = (struct b_tonegen*)arg;
-	static RTIME start = 0;
-	if(start == 0)
-		start = rt_timer_read();
-	WriteFile* file = t->sensorLogFile;
-	//rt_printf("buffer: %p, length: %u\n", buffer, length);
-	//RTIME time = rt_timer_read() - start;
-	//float timef = (time >> 6) * 0.000001;
-	float timef = t->elapsedSamples;
-	int offset = 12;
-	WriteFile_log(file, timef);
-	WriteFile_logArray(file, buffer+offset, length-offset);
+  struct b_tonegen* t = (struct b_tonegen*)arg;
   int mute = 0;
   {
 	Keys* keys = t->keys;
@@ -1060,13 +1049,7 @@ static void startKeyboardScanning(struct b_tonegen *t){
   }
   Keys_startTopCalibration(t->keys);
   Keys_loadCalibrationFile(t->keys, "/root/spi-pru/out.txt");
-  {
-	  WriteFile* file = WriteFile_new();
-	  WriteFile_init(file, "sensor_log.bin", false);
-	  WriteFile_setFileType(file, kBinary);
-	  t->sensorLogFile = file;
-	  Keys_setPostCallback(t->keys, postCallback, t);
-  }
+  Keys_setPostCallback(t->keys, postCallback, t);
   { 
 	  WriteFile* file = WriteFile_new();
 	  WriteFile_init(file, "audio_log.bin", false);
@@ -3245,7 +3228,6 @@ void freeToneGenerator (struct b_tonegen *t) {
   freeListElements(t->leConfig);
   freeListElements(t->leRuntime);
   Keys_stopAndWait(t->keys);
-  WriteFile_delete(t->sensorLogFile);
   WriteFile_delete(t->audioLogFile);
   int i;
   for (i=1; i <= NOF_WHEELS; i++) {
@@ -4059,7 +4041,18 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
     t->percEnvGain = t->percEnvGainReset;
   }
 
-  WriteFile_logArray(t->audioLogFile, buf, lengthSamples);
+  // log sensors
+  {
+	Keys* keys = t->keys;
+    float pos[TOTAL_SCANNER_KEYS];
+    for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
+      pos[n] = Keys_getNoteValue(keys, n + 24);
+    }
+    WriteFile_logArray(t->audioLogFile, pos, TOTAL_SCANNER_KEYS);
+  }
+  // log audio
+  WriteFile_logArray(t->audioLogFile, bufs[0], BUFFER_SIZE_SAMPLES);
+  WriteFile_logArray(t->audioLogFile, bufs[1], BUFFER_SIZE_SAMPLES);
 } /* oscGenerateFragment */
 
 

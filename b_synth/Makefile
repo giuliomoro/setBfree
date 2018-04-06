@@ -2,8 +2,11 @@ MODNAME=setBfree
 include ../common.mak
 include ../git2lv2.mk
 
-LOADLIBES = /root/Bela/lib/libmathneon.a -lm `/usr/xenomai/bin/xeno-config --skin native --ldflags`
-override CFLAGS+= -I/root/Bela/include -I../src -I../b_overdrive -I../b_reverb -I../b_whirl -DJACK_DESCRIPT -I/root/spi-pru  `/usr/xenomai/bin/xeno-config --skin=native --cflags`
+DEFAULT_XENOMAI_LDFLAGS :=  $(shell /usr/xenomai/bin/xeno-config --skin cobalt --ldflags --no-auto-init --no-mode-check)
+DEFAULT_XENOMAI_CFLAGS := $(filter-out -lmodechk, $(DEFAULT_XENOMAI_LDFLAGS))
+LDFLAGS= -L/root/Bela/lib
+LOADLIBES = -lmathneon -lm $(DEFAULT_XENOMAI_LDFLAGS)
+override CFLAGS+= -I/root/Bela/include -I../src -I../b_overdrive -I../b_reverb -I../b_whirl -DJACK_DESCRIPT -I/root/spi-pru  `/usr/xenomai/bin/xeno-config --skin=cobalt --no-mode-check --cflags`
 override CFLAGS+=`pkg-config --cflags lv2` -DLV2SYNTH -fvisibility=hidden
 targets=
 

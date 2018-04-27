@@ -216,7 +216,7 @@
  */
 
 
-#include <native/timer.h>
+
 extern int gShouldStop;
 #ifndef CONFIGDOCONLY
 
@@ -977,6 +977,7 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
           float threshold = contactClosingDistance[playingKey][bus];
           if(pos[n] <= threshold && oldPos[n] > threshold)
           { // contact was inactive, we need to turn it on
+            rt_printf("making contact for key %d\n", n);
             int contact = make_contact(bus, playingKey);
             float rawVelocity = -(pos[n] - oldOldPos[n]);
             short velocity = (rawVelocity) * 170;
@@ -984,6 +985,7 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
           }
           else if(pos[n] > threshold && oldPos[n] <= threshold)
           { // contact was active, we need to turn it off
+            rt_printf("breaking contact for key %d\n", n);
             int contact = make_contact(bus, playingKey);
             float rawVelocity = -(pos[n] - oldOldPos[n]);
             short velocity = (rawVelocity) * 170;
@@ -1048,7 +1050,7 @@ static void startKeyboardScanning(struct b_tonegen *t){
     exit(1);
   }
   Keys_startTopCalibration(t->keys);
-  Keys_loadCalibrationFile(t->keys, "/root/spi-pru/out.txt");
+  Keys_loadCalibrationFile(t->keys, "/root/out.calib");
   Keys_setPostCallback(t->keys, postCallback, t);
   { 
 	  WriteFile* file = WriteFile_new();

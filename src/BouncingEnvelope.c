@@ -3,19 +3,42 @@
 #include <math.h>
 #include <math_neon.h>
 #include <stdlib.h>
+#include <stdint.h>
+
+/* The state word must be initialized to non-zero */
+uint32_t xorshift32(uint32_t state[static 1])
+{
+	/* Algorithm "xor" from p. 4 of Marsaglia, "Xorshift RNGs" */
+	uint32_t x = state[0];
+	x ^= x << 13;
+	x ^= x >> 17;
+	x ^= x << 5;
+	state[0] = x;
+	return x;
+}
 
 static float open = 0;
 static float closed = 1;
+
+// triangular oscillator. Input range: 0:1, output range: 0:1
+float tri(phase)
+{
+	if(phase > 0.5)
+		return phase * 2.f;
+	else
+		return 0.5f - (phase - 0.5f);
+}
+
 void BouncingEnvelope_init(BouncingEnvelope* be, short velocity)
 {	
-	be->amplitude = 3*velocity/64.f;
+	be->amplitude = 3.f * velocity/64.f;
 	if(be->amplitude < 0)
 		be->amplitude = 0;
 	be->contactPosition = be->amplitude;
 	be->highThreshold = 0.2;
 	be->lowThreshold = 0.015;
-	be->phase = (rand()/(float)RAND_MAX) * M_PI * 0.7;
-	be->phaseStep = 0.0907;
+	be->phase = (rand()/(float)RAND_MAX) * (float)M_PI * 0.7f;
+	be->phaseStep = 0.0907 / (2 * M_PI);
 	be->e = 0.3;
 	be->samplesSinceLastTransition = 0;
 	be->contactState = closed;
@@ -31,18 +54,20 @@ void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buf
 	const float phaseStep = be->phaseStep;
 	const float e = be->e;
 	float contactPosition;
+	if(1)
 	for(int n = 0; n < length; ++n)
 	{
-		contactPosition = amplitude * sinf_neon(phase);
+		contactPosition = amplitude * tri(phase);
 		if (contactPositionPrev > 0 && contactPosition < 0)
 		{
 			// changed direction, start a new oscillation
 			// with updated conditions
-			phase = -0.5 * M_PI - phaseStep;
-			amplitude = amplitude* e;
+			phase = 0;//-0.5f * (float)M_PI - phaseStep;
+			amplitude = amplitude * e;
 		}
 		contactPositionPrev = contactPosition;
 		phase = phase + phaseStep;
+		continue;
 
 		/*
 		if(position)
@@ -56,12 +81,14 @@ void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buf
 			contactState = open;
 			sinceTrans = 0;
 		}
-		else {
+		else
+	       	{
+			static int ran = 1;
 			// probability that there is a transition 
-			float prob = 0.1 + (0.4*sinceTrans);
-			float ran = rand() / (float)RAND_MAX;
-			short transition = ran < prob;
-			//printf("ran: %f, prob: %f, sinceTran: %d, transtion: %d\n", ran, prob, sinceTrans, transition);
+			float prob = 0.1f + ( (float)RAND_MAX * 0.4f * sinceTrans);
+			ran = xorshift32(ran);
+			int transition = ran < prob;
+			//printf("ran: %f, prob: %f, sinceTran: %d, transition: %d\n", ran, prob, sinceTrans, transition);
 			if(transition){
 				contactState = !contactState;
 				sinceTrans = 0;

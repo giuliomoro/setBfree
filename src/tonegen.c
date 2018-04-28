@@ -372,12 +372,6 @@ extern int gShouldStop;
 #define taperPlusOne      3.5
 #define taperPlusTwo      7.0
 
-#ifdef INDIVIDUAL_CONTACTS
-#define FIRST_SOUNDING_KEY 12
-#define TOTAL_SCANNER_KEYS 73
-#define NOF_DRAWBARS_PER_MANUAL 9
-#endif
-
 static void computeClosingDistance(struct b_tonegen* t, unsigned int keys, unsigned int busbars, float min, float max,unsigned int seed)
 {
 	srand(seed);
@@ -940,125 +934,6 @@ static double taperingModel (int key, int bus) {
   return dBToGain (tapering);
 }
 
-static void postCallback(void* arg, float* buffer, unsigned int length)
-{
-  struct b_tonegen* t = (struct b_tonegen*)arg;
-  int mute = 0;
-  {
-	Keys* keys = t->keys;
-	float* pos = t->pos;
-	float* oldPos = t->oldPos[t->oldPosCurr];
-	float* oldOldPos = t->oldPos[(t->oldPosCurr + 1) % NUM_OLD_POS];
-	float** contactClosingDistance = t->contactClosingDistance;
-	int notZero = 0;
-    for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
-      pos[n] = Keys_getNoteValue(keys, n + 24);
-      if(pos[n] != 0)
-        ++notZero;
-    }
-    if(!notZero)
-    {
-        // no keyboard connected
-        for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
-            pos[n] = 1;
-        }
-    }
-    for(int n = 10; n < FIRST_SOUNDING_KEY; ++n){
-	  // if using one of the presets,
-	  // do not generate output
-      if(pos[n] < 0.5)
-        mute = 1;
-    }
-	if(t->elapsedSamples){
-      for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n){
-        for(int bus = 0; bus < NOF_DRAWBARS_PER_MANUAL ; ++bus)
-        {
-          int playingKey = n - FIRST_SOUNDING_KEY;
-          float threshold = contactClosingDistance[playingKey][bus];
-          if(pos[n] <= threshold && oldPos[n] > threshold)
-          { // contact was inactive, we need to turn it on
-            rt_printf("making contact for key %d\n", n);
-            int contact = make_contact(bus, playingKey);
-            float rawVelocity = -(pos[n] - oldOldPos[n]);
-            short velocity = (rawVelocity) * 170;
-            oscContactOn(t, contact, velocity);
-          }
-          else if(pos[n] > threshold && oldPos[n] <= threshold)
-          { // contact was active, we need to turn it off
-            rt_printf("breaking contact for key %d\n", n);
-            int contact = make_contact(bus, playingKey);
-            float rawVelocity = -(pos[n] - oldOldPos[n]);
-            short velocity = (rawVelocity) * 170;
-            oscContactOff(t, contact, velocity);
-          }
-        }
-	  }
-      ++t->oldPosCurr;
-      if(t->oldPosCurr == NUM_OLD_POS)
-      	t->oldPosCurr = 0;
-      // remember current position
-      for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
-        t->oldPos[t->oldPosCurr][n] = pos[n];
-      }
-      t->mute = mute;
-    }
-
-	static int count = 0;
-	/* auto play */
-	if(0)
-	{
-		if(count % 1000 == 0){
-			static int state  = 0;
-			oscContactOn(t, 216, 1 + (126 * state));
-			oscContactOn(t, 217, 1 + (126 * state));
-			state = !state;
-		}
-		if(count % 1000 == 500){
-			oscContactOff(t, 217, 0);
-		}
-		if(count % 1000 == 500){
-			oscContactOff(t, 216, 0);
-		}
-	}
-	if(count % 300 == 0)
-	{
-		rt_printf("%s ", mute ? "m" : "_");
-		rt_printf("%s ", notZero ? "" : "NO_SCANNER_CONNECTED");
-		for(int n = 10; n < TOTAL_SCANNER_KEYS; ++n)
-			rt_printf("%2d ", (int)(pos[n]*10));
-		rt_printf("\n");
-	}
-	count++;
-  }
-}
-
-static void startKeyboardScanning(struct b_tonegen *t){
-  if(t->bt)
-    BoardsTopology_delete(t->bt);
-  if(t->keys)
-    Keys_delete(t->keys);
-  t->bt = BoardsTopology_new();
-  t->keys = Keys_new();
-  BoardsTopology_setLowestNote(t->bt, 24);
-  BoardsTopology_setBoard(t->bt, 0, 0, 24);
-  BoardsTopology_setBoard(t->bt, 1, 0, 23);
-  BoardsTopology_setBoard(t->bt, 2, 0, 23);
-  int ret = Keys_start(t->keys, t->bt, NULL);
-  if(ret < 0)
-  {
-    printf("Error starting keys: %d\n", ret);
-    exit(1);
-  }
-  Keys_startTopCalibration(t->keys);
-  Keys_loadCalibrationFile(t->keys, "/root/out.calib");
-  Keys_setPostCallback(t->keys, postCallback, t);
-  { 
-	  WriteFile* file = WriteFile_new();
-	  WriteFile_init(file, "audio_log.bin", false);
-	  WriteFile_setFileType(file, kBinary);
-	  t->audioLogFile = file;
-  }
-}
 /**
  * Applies the built-in default model to the manual tapering and crosstalk.
  */
@@ -3078,6 +2953,7 @@ static void toggleMute (void *d, unsigned char u) {
  * configuration files have already been read, so parameters should already
  * be set.
  */
+void startKeyboardScanning(struct b_tonegen *t);
 void initToneGenerator (struct b_tonegen *t, void *m) {
   int i;
 

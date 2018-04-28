@@ -94,7 +94,6 @@ typedef struct deflist_element {
 
 #define INDIVIDUAL_CONTACTS
 #ifdef INDIVIDUAL_CONTACTS
-#include <Keys_c.h>
 #include "contacts.h"
 #endif /* INDIVIDUAL_CONTACTS */
 

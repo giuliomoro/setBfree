@@ -189,6 +189,7 @@ LV2OBJ= \
   ../src/vibrato.c \
   ../src/state.c \
   ../src/tonegen.c \
+  ../src/tonegen2.c \
   ../src/pgmParser.c \
   ../src/memstream.c \
   ../src/midnam.c \

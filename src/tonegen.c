@@ -3280,7 +3280,10 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned s
  * there are changes to be made, and human fingers are typically quite
  * slow. Sequencers, however, may put some strain on things.
  */
+void autoplay(struct b_tonegen *t);
 void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSamples) {
+	/* auto play */
+	autoplay(t);
   // mix inputs to mono and store in the second channel
   if(bufs[1])
   {

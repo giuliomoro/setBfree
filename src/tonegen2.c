@@ -64,29 +64,6 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
     }
 
 	static int count = 0;
-	/* auto play */
-	if(0)
-	{
-#define numContacts 25
-		static int contacts[numContacts] = {0};
-		if(contacts[0] == 0)
-		{
-			for(int n = 0; n < numContacts; ++n)
-				contacts[n] = n + 20;
-		}
-
-		int period = 48;
-		if(count % period == 0){
-			static int state  = 0;
-			for(int n = 0; n < numContacts; ++n)
-				oscContactOn(t, contacts[n], 1 + (126 * state));
-			state = !state;
-		}
-		if(count % period == period/2){
-			for(int n = 0; n < numContacts; ++n)
-				oscContactOff(t, contacts[n], 0);
-		}
-	}
 	if(0)
 	if(count % 300 == 0)
 	{
@@ -126,4 +103,30 @@ void startKeyboardScanning(struct b_tonegen *t){
 	  WriteFile_setFileType(file, kBinary);
 	  t->audioLogFile = file;
   }
+
+void autoplay(struct b_tonegen *t)
+{
+	static int count = 0;
+#define numContacts 25
+	static int contacts[numContacts] = {0};
+	if(contacts[0] == 0)
+	{
+		for(int n = 0; n < numContacts; ++n)
+			contacts[n] = n + 20;
+	}
+
+	int period = 2;
+	if(count >= period - 1){
+		for(int n = 0; n < numContacts; ++n)
+			oscContactOff(t, contacts[n], 0);
+	}
+	if(count == 0){
+		static int state  = 0;
+		for(int n = 0; n < numContacts; ++n)
+			oscContactOn(t, contacts[n], 1 + (126 * state));
+		state = !state;
+	}
+	++count;
+	if(count == period)
+		count = 0;
 }

@@ -58,7 +58,7 @@ void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buf
 	for(int n = 0; n < length; ++n)
 	{
 		contactPosition = amplitude * tri(phase);
-		if (contactPositionPrev > 0 && contactPosition < 0)
+		if (contactPositionPrev > 0 && contactPosition <= 0)
 		{
 			// changed direction, start a new oscillation
 			// with updated conditions

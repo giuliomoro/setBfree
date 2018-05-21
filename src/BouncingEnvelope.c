@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <limits.h>
 
 /* The state word must be initialized to non-zero */
 uint32_t xorshift32(uint32_t state[static 1])
@@ -54,7 +55,6 @@ void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buf
 	const float phaseStep = be->phaseStep;
 	const float e = be->e;
 	float contactPosition;
-	if(1)
 	for(int n = 0; n < length; ++n)
 	{
 		contactPosition = amplitude * tri(phase);
@@ -67,7 +67,6 @@ void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buf
 		}
 		contactPositionPrev = contactPosition;
 		phase = phase + phaseStep;
-		continue;
 
 		/*
 		if(position)
@@ -83,10 +82,10 @@ void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buf
 		}
 		else
 	       	{
-			static int ran = 1;
+			static unsigned int ran = 1;
 			// probability that there is a transition 
 			float prob = 0.1f + ( (float)RAND_MAX * 0.4f * sinceTrans);
-			ran = xorshift32(ran);
+			ran = xorshift32(&ran);
 			int transition = ran < prob;
 			//printf("ran: %f, prob: %f, sinceTran: %d, transition: %d\n", ran, prob, sinceTrans, transition);
 			if(transition){
@@ -105,27 +104,3 @@ void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buf
 	be->contactState = contactState;
 }
 
-
-/*
-int main()
-{
-	BouncingEnvelope be;
-	short velocity = 100;
-	BouncingEnvelope_init(&be, velocity);
-	const unsigned int length = 64;
-	float buffer[length];
-	float position[length];
-	printf("out = [\n");
-	for(int n = 0; n < 3; ++n)
-	{
-		BouncingEnvelope_step(&be, length, buffer, position);
-		for(int n = 0; n < length; ++n)
-		{
-			printf("%.5f %.5f\n", buffer[n], position[n]);
-			//printf("%.5f\n", position[n]);
-		}
-	}
-	printf("];\n");
-	return 0;
-}
-*/

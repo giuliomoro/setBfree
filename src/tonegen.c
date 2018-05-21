@@ -3922,6 +3922,8 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
     t->percEnvGain = t->percEnvGainReset;
   }
 
+//#define OFFLINE
+#ifndef OFFLINE
   // log sensors
   {
 	Keys* keys = t->keys;
@@ -3931,9 +3933,19 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
     }
     WriteFile_logArray(t->audioLogFile, pos, TOTAL_SCANNER_KEYS);
   }
+#endif /* OFFLINE */
+  // make organ sound stereo
+  float* y2ptr = bufs[1];
+  yptr = bufs[0];
+  for(i = 0; i < BUFFER_SIZE_SAMPLES; ++i)
+  {
+    *y2ptr++ = *yptr++;
+  }
+#ifndef OFFLINE
   // log audio
   WriteFile_logArray(t->audioLogFile, bufs[0], BUFFER_SIZE_SAMPLES);
   WriteFile_logArray(t->audioLogFile, bufs[1], BUFFER_SIZE_SAMPLES);
+#endif /* OFFLINE */
 } /* oscGenerateFragment */
 
 

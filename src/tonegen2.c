@@ -1,4 +1,5 @@
 #include "tonegen.h"
+//#define OFFLINE
 
 static void postCallback(void* arg, float* buffer, unsigned int length)
 {
@@ -88,6 +89,7 @@ void startKeyboardScanning(struct b_tonegen *t){
   BoardsTopology_setBoard(t->bt, 0, 0, 24);
   BoardsTopology_setBoard(t->bt, 1, 0, 23);
   BoardsTopology_setBoard(t->bt, 2, 0, 23);
+#ifndef OFFLINE
   int ret = Keys_start(t->keys, t->bt, NULL);
   if(ret < 0)
   {
@@ -103,6 +105,8 @@ void startKeyboardScanning(struct b_tonegen *t){
 	  WriteFile_setFileType(file, kBinary);
 	  t->audioLogFile = file;
   }
+#endif /* OFFLINE */
+}
 
 void autoplay(struct b_tonegen *t)
 {

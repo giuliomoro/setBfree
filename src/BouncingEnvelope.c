@@ -1,7 +1,6 @@
 #include <BouncingEnvelope.h>
 #include <stdio.h>
 #include <math.h>
-#include <math_neon.h>
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -21,7 +20,7 @@ static float open = 0;
 static float closed = 1;
 
 // triangular oscillator. Input range: 0:1, output range: 0:1
-float tri(phase)
+static float tri(float phase)
 {
 	if(phase > 0.5)
 		return phase * 2.f;
@@ -37,7 +36,8 @@ void BouncingEnvelope_init(BouncingEnvelope* be, short velocity)
 	be->contactPosition = be->amplitude;
 	be->highThreshold = 0.2;
 	be->lowThreshold = 0.015;
-	be->phase = (rand()/(float)RAND_MAX) * (float)M_PI * 0.7f;
+	static unsigned int ran = 1;
+	be->phase = xorshift32(&ran) / (float)UINT_MAX * 0.7f;
 	be->phaseStep = 0.0907 / (2 * M_PI);
 	be->e = 0.3;
 	be->samplesSinceLastTransition = 0;

@@ -27,6 +27,7 @@
 #include <inttypes.h>
 #include "BouncingEnvelope.h"
 #include <WriteFile_c.h>
+#include <Keys_c.h>
 
 #define DEBUG_TONEGEN_OSC 1
 int rt_printf(const char *format, ...);

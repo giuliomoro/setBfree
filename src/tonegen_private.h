@@ -1,0 +1,5 @@
+#include <Keys_c.h>
+#define TOTAL_SCANNER_KEYS 73
+#define FIRST_SOUNDING_KEY 13
+#define NOF_DRAWBARS_PER_MANUAL 9
+

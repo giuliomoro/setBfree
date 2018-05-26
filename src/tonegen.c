@@ -230,6 +230,7 @@ extern int gShouldStop;
 #include <limits.h>
 #include <math.h>
 #include <assert.h>
+#include "tonegen_private.h"
 
 #include "main.h"
 #include "global_inst.h"

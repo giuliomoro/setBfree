@@ -12,7 +12,6 @@ typedef struct _bouncingEnvelope{
 	float phase;
 	float phaseStep;
 	float contactState;
-	unsigned int samplesSinceLastTransition;
 } BouncingEnvelope;
 
 /**
@@ -25,7 +24,7 @@ void BouncingEnvelope_init(BouncingEnvelope* be, short velocity);
  * @param length the length of the step to compute.
  * @param buffer the output buffer
  */
-void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buffer/*, float* position*/);
+void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buffer, int verbose/*, float* position*/);
 
 
 

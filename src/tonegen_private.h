@@ -1,7 +1,7 @@
 #include <Keys_c.h>
 #define INDIVIDUAL_CONTACTS
 #define TOTAL_SCANNER_KEYS 73
-#define FIRST_SOUNDING_KEY 13
+#define FIRST_SOUNDING_KEY 12
 #define NOF_DRAWBARS_PER_MANUAL 9
 
 #define LE_HARMONIC_NUMBER_OF(LEP) ((LEP)->u.ssf.sa)

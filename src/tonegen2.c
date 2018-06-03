@@ -1,5 +1,7 @@
 #include "tonegen.h"
 #include "tonegen_private.h"
+#include <assert.h>
+#include <stdlib.h>
 //#define OFFLINE
 
 static void postCallback(void* arg, float* buffer, unsigned int length)

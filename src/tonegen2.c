@@ -10,6 +10,8 @@
 
 static void postCallback(void* arg, float* buffer, unsigned int length)
 {
+	static unsigned int callbackCount = -1;
+	++callbackCount;
 	struct b_tonegen* t = (struct b_tonegen*)arg;
 	if(t->spreadHandlerUpdating)
 	{
@@ -41,6 +43,7 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
       if(pos[n] < 0.5)
         mute = 1;
     }
+	float hyst = 0.001;
 	if(t->elapsedSamples){
 		for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n){
 			for(int bus = 0; bus < NOF_DRAWBARS_PER_MANUAL ; ++bus) {
@@ -52,12 +55,10 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 				{ // contact was inactive, we need to turn it on
 					onset = true;
 				}
-				else if(pos[n] > threshold && oldPos[n] <= threshold)
+				else if(pos[n] > threshold + hyst && oldPos[n] <= threshold + hyst)
 				{ // contact was active, we need to turn it off
 					offset = true;
 				}
-				if(!onset && !offset)
-					continue;
 				float rawVelocity = -(pos[n] - oldOldPos[n]);
 				short velocity = (rawVelocity) * 170;
 				if(t->contactSpread == kSpreadZeroNoV
@@ -66,7 +67,10 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 					// same triggering point for all busses:
 					// KeyOn / KeyOff
 					if(onset)
+					{
+						//rt_printf("count: %7d, playingKey: %d, bus: %d, threshold: %f, pos: %f, oldPos: %f\n", callbackCount, playingKey, bus, threshold, pos[n], oldPos[n]);
 						oscKeyOn(t, playingKey, velocity);
+					}
 					else if (offset)
 						oscKeyOff(t, playingKey, velocity);
 					break; // do not check other busses
@@ -90,9 +94,8 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
       t->mute = mute;
     }
 
-	static int count = 0;
 	if(0)
-	if(count % 300 == 0)
+	if(callbackCount % 300 == 0)
 	{
 		rt_printf("%s ", mute ? "m" : "_");
 		rt_printf("%s ", notZero ? "" : "NO_SCANNER_CONNECTED");
@@ -100,7 +103,6 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 			rt_printf("%2d ", (int)(pos[n]*10));
 		rt_printf("\n");
 	}
-	count++;
   }
 }
 

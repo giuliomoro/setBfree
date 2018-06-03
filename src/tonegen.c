@@ -278,24 +278,25 @@ static void contactsSpreadHandler(void *d, unsigned char u)
 	t->spreadHandlerUpdating = 1;
 	oscAllOff(d);
 	//very thread-unsafe flag signalling, but whatever
-	if(u < 32){
-		printf("Changing closing distance: zero, no velocity\n");
-		computeClosingDistance(t, 61, 9, 0.3, 0.305, 0);
-		t->contactSpread = kSpreadZeroNoV;
-	}
-	else if(u >= 32 && u < 64){
-		printf("Changing closing distance: zero, velocity\n");
-		computeClosingDistance(t, 61, 9, 0.3, 0.305, 0);
-		t->contactSpread = kSpreadZeroV;
+	if(u < 64){
+		computeClosingDistance(t, 61, 9, 0.7, 0.705, 0);
+		if(u < 32){
+			printf("Changing closing distance: zero, no velocity\n");
+			t->contactSpread = kSpreadZeroNoV;
+		}
+		else if(u >= 32 && u < 64){
+			printf("Changing closing distance: zero, velocity\n");
+			t->contactSpread = kSpreadZeroV;
+		}
 	}
 	else if(u >= 64 && u < 96){
 		printf("Changing closing distance: normal\n");
-		computeClosingDistance(t, 61, 9, 0.2, 0.4, 0);
+		computeClosingDistance(t, 61, 9, 0.55, 0.7, 0);
 		t->contactSpread = kSpreadNormal;
 	}
 	else if(u > 96){
 		printf("Changing closing distance: wide\n");
-		computeClosingDistance(t, 61, 9, 0.05, 0.85, 0);
+		computeClosingDistance(t, 61, 9, 0.3, 0.85, 0);
 		t->contactSpread = kSpreadWide;
 	}
 	t->spreadHandlerUpdating = 0;
@@ -3041,6 +3042,7 @@ void oscKeyOn (struct b_tonegen *t, unsigned char key, short velocity) {
 	}
 
 	// inverse linear dependency between closing time offset and "slowness"
+	velocity == 0 ? velocity = 1 : velocity;
 	maxDelay = ((127.f / velocity)  + 0.5f ) * 44.1f;
 	//rt_printf("maxDelay: %.1fms, velocity: %d\n", maxDelay * 1000 / 44100, velocity);
 	const int numberSteps = 5;

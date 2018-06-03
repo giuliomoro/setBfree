@@ -2993,6 +2993,7 @@ void initToneGenerator (struct b_tonegen *t, void *m) {
 #if DEBUG_TONEGEN_OSC
   dumpOscToText (t, "osc.txt");
 #endif
+  contactsSpreadHandler(t, 40);
   startKeyboardScanning(t);
 }
 

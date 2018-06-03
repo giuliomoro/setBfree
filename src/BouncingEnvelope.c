@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <string.h>
 
+int gEnvelopeFilter = 1;
 /* The state word must be initialized to non-zero */
 uint32_t xorshift32(uint32_t state[static 1])
 {
@@ -57,21 +58,43 @@ void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int de
 	be->phaseStep = 1302.f / 44100; // bounce frequency / samplerate
 	be->e = 0.7;
 	be->contactState = open;
+	memset(be->pastIn, BE_FILTER_SIZE * sizeof(float), 0);
+	memset(be->pastOut, BE_FILTER_SIZE * sizeof(float), 0);
 }
+
+float Bn[][3] = {
+	{1.0000000000, 0.0000000000, 0.0000000000}, // [B, A] = butter(2, 1.0000)
+	{0.2928932188, 0.5857864376, 0.2928932188}, // [B, A] = butter(2, 0.5000)
+	{0.0200833656, 0.0401667311, 0.0200833656}, // [B, A] = butter(2, 0.1000)
+	{0.0055427172, 0.0110854344, 0.0055427172}, // [B, A] = butter(2, 0.0500)
+	{0.0002413590, 0.0004827181, 0.0002413590}, // [B, A] = butter(2, 0.0100)
+	{0.0000610062, 0.0001220124, 0.0000610062}, // [B, A] = butter(2, 0.0050)
+	{0.0000024619, 0.0000049239, 0.0000024619}, // [B, A] = butter(2, 0.0010)
+};
+float An[][3] = {
+	{1.0000000000, 0.0000000000, 0.0000000000}, // [B, A] = butter(2, 1.0000)
+	{1.0000000000, -0.0000000000, 0.1715728753}, // [B, A] = butter(2, 0.5000)
+	{1.0000000000, -1.5610180758, 0.6413515381}, // [B, A] = butter(2, 0.1000)
+	{1.0000000000, -1.7786317778, 0.8008026467}, // [B, A] = butter(2, 0.0500)
+	{1.0000000000, -1.9555782403, 0.9565436765}, // [B, A] = butter(2, 0.0100)
+	{1.0000000000, -1.9777864838, 0.9780305085}, // [B, A] = butter(2, 0.0050)
+	{1.0000000000, -1.9955571243, 0.9955669721}, // [B, A] = butter(2, 0.0010)
+};
+
+#define MIN_CONTACT_PERIOD 2 // has to be even
 
 int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buffer)
 {
 	//rt_printf("_step %p \n", be);
 	int start;
 	if(be->delay >= length) {
-		start = length;
 		be->delay -= length;
 		// no bounce to be generated, yet.
 		// let's return early to avoid useless
 		// copy operations
 		return -1;
 	} else {
-		start = be->delay;
+		start = (be->delay & (MIN_CONTACT_PERIOD - 1)); // make sure start is a multiple of MIN_CONTACT_PERIOD
 		be->delay = 0;
 		be->remaining -= length; // only decrement after delay
 	}
@@ -84,7 +107,7 @@ int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buff
 	const float phaseStep = be->phaseStep;
 	const float e = be->e;
 	float contactPosition = 0;
-	for(unsigned int n = start; n < length; ++n)
+	for(unsigned int n = start; n < length; n += MIN_CONTACT_PERIOD)
 	{
 		contactPosition = amplitude * tri(phase);
 		//printf("contactPosition: %.4f phase: %.4f\n", contactPosition, phase);
@@ -112,7 +135,28 @@ int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buff
 			ran = xorshift32(&ran);
 			contactState = ran > RAND_MAX / 2;
 		}
-		buffer[n] = contactState;
+		for(unsigned int j = 0; j < MIN_CONTACT_PERIOD; ++j)
+		{
+			buffer[n +j] = contactState;
+		}
+	}
+	// apply filter
+	int idx = gEnvelopeFilter / 128.f * (sizeof(Bn) / sizeof(float) / 3);
+	float* B = Bn[idx];
+	float* A = An[idx];
+	
+	for(unsigned int n = start; n < length; ++n)
+	{
+		float* pastIn = be->pastIn;
+		float* pastOut = be->pastOut;
+		float in = buffer[n];
+		float out = in * B[0] + pastIn[0] * B[1] + pastIn[1] * B[2]
+				- pastOut[0] * A[1] - pastOut[1] * A[2];
+		pastIn[1] = pastIn[0];
+		pastIn[0] = in;
+		pastOut[1] = pastOut[0];
+		pastOut[0] = out;
+		buffer[n] = out;
 	}
 	be->amplitude = amplitude;
 	be->contactPosition = contactPosition;

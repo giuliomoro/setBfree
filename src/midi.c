@@ -164,6 +164,7 @@ static const char * ccFuncNames[] = {
 
   "volume.mute",
   "contacts.spread",
+  "contacts.filter",
 
   NULL
 };
@@ -862,6 +863,7 @@ void midiPrimeControllerMapping (void *mcfg) {
   loadCCMap (m, "whirl.horn.filter.a.gain", 30, m->ctrlUseA, NULL, NULL);
   loadCCMap (m, "volume.mute", 31, m->ctrlUseA, m->ctrlUseB, m->ctrlUseC);
   loadCCMap (m, "contacts.spread", 32, m->ctrlUseA, m->ctrlUseB, m->ctrlUseC);
+  loadCCMap (m, "contacts.filter", 33, m->ctrlUseA, m->ctrlUseB, m->ctrlUseC);
 
   /* 32-63 are least significant bits of controller 0-31 */
 

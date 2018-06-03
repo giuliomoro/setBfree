@@ -272,6 +272,11 @@ static void computeClosingDistance(struct b_tonegen* t, unsigned int keys, unsig
 	}
 }
 
+extern int gEnvelopeFilter;
+static void contactFilterHandler(void *d, unsigned char u)
+{
+	gEnvelopeFilter = u;
+}
 static void contactsSpreadHandler(void *d, unsigned char u)
 {
 	struct b_tonegen *t = (struct b_tonegen *)d;
@@ -2989,6 +2994,7 @@ void initToneGenerator (struct b_tonegen *t, void *m) {
 
   useMIDIControlFunction (m, "volume.mute", toggleMute, t);
   useMIDIControlFunction (m, "contacts.spread", contactsSpreadHandler, t);
+  useMIDIControlFunction (m, "contacts.filter", contactFilterHandler, t);
 
 #if DEBUG_TONEGEN_OSC
   dumpOscToText (t, "osc.txt");

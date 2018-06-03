@@ -61,7 +61,7 @@ PREBUILT=build/src/midi.o \
         build/src/pgmParser.o \
         build/src/memstream.o \
         build/src/midnam.o \
-		build/src/BouncingEnvelope.o \
+        build/src/BouncingEnvelope.o \
         build/b_whirl/eqcomp.o\
         build/b_whirl/whirl.o \
         build/b_overdrive/overdrive.o \
@@ -69,6 +69,7 @@ PREBUILT=build/src/midi.o \
         build/b_synth/lv2.o
 
 
+build/BouncingEnvelope.o:  ../src/BouncingEnvelope.h
 build/tonegen.o:  ../src/contacts.h ../src/tonegen_private.h
 build/tonegen2.o:  ../src/contacts.h ../src/tonegen_private.h
 

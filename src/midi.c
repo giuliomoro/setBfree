@@ -1140,8 +1140,8 @@ void process_midi_event(void *instp, const struct bmidi_event_t *ev) {
       for(unsigned int n = 0; n < numContacts; ++n){
         bus = n;
         int contact = make_contact(bus, key);
-        //rt_printf("bus: %d, key: %d\n", get_contact_bus(contact), get_contact_key(contact));
-		unsigned short velocity = ev->d.tone.velocity;
+	unsigned short velocity = ev->d.tone.velocity;
+        //rt_printf("bus: %d, key: %d. velocity: %d\n", get_contact_bus(contact), get_contact_key(contact), velocity);
         if(m->keyTable[ev->channel] && m->keyTable[ev->channel][ev->d.tone.note] != 255) {
           if (velocity){
 	          //oscKeyOn (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],

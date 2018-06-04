@@ -394,7 +394,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 			/* All envelopes, both attack and release must traverse 0-1. */
 
       t->coreWriter->env = t->releaseEnv[i & 7];
-	  //rt_printf("Using releaseEnv %d %d\n", i&7, i);
+      //rt_printf("Using releaseEnv %d %d, swell: %f\n", i&7, i, aop->sumSwell);
 
       if (copyDone) {
         t->coreWriter->opr = CR_ADDENV;
@@ -537,7 +537,31 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
           osp->rflags |= ORF_PERSISTED;
         }
         if(osp->be) { //the envelope is already active
-		  BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env);
+		int verbose = 0;
+#undef LOGSOME
+#ifdef LOGSOME
+		static void* ptr = 0;
+		if(ptr == 0)
+		{
+			ptr = osp;
+		}
+		if(osp == ptr)
+		{
+			verbose = 1;
+		}
+#endif /* LOGSOME */
+		BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env, verbose);
+#ifdef LOGSOME
+		if(osp == ptr)
+		{
+			rt_printf("%d ", osp->velocity);
+			for(int n = 0; n < BUFFER_SIZE_SAMPLES; ++n)
+			{
+				rt_printf("%.0f", env[n]);
+			}
+			rt_printf("\n");
+		}
+#endif /* LOGSOME */
           int remaining = (osp->remaining) - BUFFER_SIZE_SAMPLES;
           if (remaining <= 0) { // the envelope is completed
             envelopeCompleted = 1; 

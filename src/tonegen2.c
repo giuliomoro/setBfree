@@ -114,24 +114,26 @@ void startKeyboardScanning(struct b_tonegen *t){
 void autoplay(struct b_tonegen *t)
 {
 	static int count = 0;
-#define numContacts 25
+#define numContacts 1
 	static int contacts[numContacts] = {0};
 	if(contacts[0] == 0)
 	{
 		for(int n = 0; n < numContacts; ++n)
-			contacts[n] = n + 20;
+			contacts[n] = n + 100;
 	}
 
-	int period = 2;
-	if(count >= period - 1){
+	int period = 2000;
+	if(count == period / 2 ){
 		for(int n = 0; n < numContacts; ++n)
 			oscContactOff(t, contacts[n], 0);
 	}
 	if(count == 0){
-		static int state  = 0;
+		static int vel = 1;
 		for(int n = 0; n < numContacts; ++n)
-			oscContactOn(t, contacts[n], 1 + (126 * state));
-		state = !state;
+			oscContactOn(t, contacts[n], vel);
+		vel += 20;
+		if(vel > 127)
+			vel = 1;
 	}
 	++count;
 	if(count == period)

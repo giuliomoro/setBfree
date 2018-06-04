@@ -389,10 +389,6 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
     if (osp->rflags & ORF_REMOVED) {/* Decay instruction for removed osc. */
       /* Put it on the removal list */
       removedList[removedEnd++] = oscNumber;
-#ifdef LONG_ENVELOPES
-	  osp->be = NULL;
-	  aop->sumSwell = 0;
-#endif /* LONG_ENVELOPES */
 			/* All envelopes, both attack and release must traverse 0-1. */
 
       t->coreWriter->env = t->releaseEnv[i & 7];
@@ -410,6 +406,10 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
       t->coreWriter->sgain = aop->sumSwell;
       t->coreWriter->pgain = aop->sumPercn;
       t->coreWriter->vgain = aop->sumScanr;
+#ifdef LONG_ENVELOPES
+	  osp->be = NULL;
+	  aop->sumSwell = 0;
+#endif /* LONG_ENVELOPES */
       /* Target gain is zero */
       t->coreWriter->nsgain = t->coreWriter->npgain = t->coreWriter->nvgain = 0.0;
 
@@ -543,7 +543,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
             osp->rflags &= ~ORF_PERSISTED; // forget about it
           }
         }
-#else
+#else /* LONG_ENVELOPES */
         env = t->attackEnv[i & 7];
 #endif /* LONG_ENVELOPES */
 

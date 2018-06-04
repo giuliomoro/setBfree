@@ -2643,7 +2643,7 @@ static void initEnvelopes (struct b_tonegen *t) {
     if (t->envReleaseModel == ENV_COSINE) {
       for (i = 0; i < RELEASE_ENVELOPE_LENGTH; i++) {
         double a = (M_PI * (double) i) / Trelease;	/* 0 < b <= PI */
-        t->releaseEnv[b][i] = 0.5 + (0.5 * cos (a));
+        t->releaseEnv[b][i] = 0.5 - (0.5 * cos (a));
       }
     }
 

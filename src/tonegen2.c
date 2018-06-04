@@ -101,13 +101,13 @@ void startKeyboardScanning(struct b_tonegen *t){
   }
   Keys_startTopCalibration(t->keys);
   Keys_loadInverseSquareCalibrationFile(t->keys, "/root/out.calib", 24);
-  Keys_setPostCallback(t->keys, postCallback, t);
-  { 
+  {
 	  WriteFile* file = WriteFile_new();
 	  WriteFile_init(file, "audio_log.bin", false);
 	  WriteFile_setFileType(file, kBinary);
 	  t->audioLogFile = file;
   }
+  Keys_setPostCallback(t->keys, postCallback, t);
 #endif /* OFFLINE */
 }
 

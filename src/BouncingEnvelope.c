@@ -55,7 +55,7 @@ void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buf
 	float contactState = be->contactState;
 	const float phaseStep = be->phaseStep;
 	const float e = be->e;
-	float contactPosition;
+	float contactPosition = 0;
 	for(unsigned int n = 0; n < length; ++n)
 	{
 		contactPosition = amplitude * tri(phase);

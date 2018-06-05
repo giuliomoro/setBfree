@@ -12,13 +12,14 @@ typedef struct _bouncingEnvelope{
 	float phase;
 	float phaseStep;
 	float contactState;
+	unsigned int delay;
 } BouncingEnvelope;
 
 /**
  * Initialize a new envelope
  * @param length length of the buffer
  */
-void BouncingEnvelope_init(BouncingEnvelope* be, short velocity);
+void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int delay);
 /**
  * Compute a step.
  * @param length the length of the step to compute.

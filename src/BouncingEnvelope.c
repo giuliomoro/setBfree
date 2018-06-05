@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <limits.h>
+#include <string.h>
 
 /* The state word must be initialized to non-zero */
 uint32_t xorshift32(uint32_t state[static 1])
@@ -33,8 +34,9 @@ static float tri(float phase)
 		return 1.f - phase * 2.f;
 }
 
-void BouncingEnvelope_init(BouncingEnvelope* be, short velocity)
+void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int delay)
 {	
+	be->delay = delay;
 	be->amplitude = velocity / 127.f;
 	if(be->amplitude < 0)
 		be->amplitude = 0;
@@ -50,13 +52,34 @@ void BouncingEnvelope_init(BouncingEnvelope* be, short velocity)
 
 void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buffer, int verbose/*, float* position*/)
 {
+	//rt_printf("_step %p \n", be);
+	int start;
+	if(be->delay >= length) {
+		start = length;
+		be->delay -= length;
+	} else {
+		start = be->delay;
+		be->delay = 0;
+		//rt_printf("delay %d then we go\n", be->delay);
+	}
+	// if there is a delay still going, we fill
+	// the head of env with 0
+	memset(buffer, 0, sizeof(buffer[0]) * start);
+	if(start == length)
+	{
+		//rt_printf("Returning, still %d to go\n", be->delay);
+		// no bounce to be generated,
+		// let's return early to avoid useless
+		// copy operations
+		return;
+	}
 	float amplitude = be->amplitude;
 	float phase = be->phase;
 	float contactState = be->contactState;
 	const float phaseStep = be->phaseStep;
 	const float e = be->e;
 	float contactPosition = 0;
-	for(unsigned int n = 0; n < length; ++n)
+	for(unsigned int n = start; n < length; ++n)
 	{
 		contactPosition = amplitude * tri(phase);
 		//printf("contactPosition: %.4f phase: %.4f\n", contactPosition, phase);

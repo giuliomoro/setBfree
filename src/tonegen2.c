@@ -545,7 +545,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 			osp->remaining -= BUFFER_SIZE_SAMPLES;
 			if (osp->be == NULL) { // the envelope is not init'd
 				osp->be = &t->bes[oscNumber];
-				BouncingEnvelope_init(osp->be, osp->velocity);
+				BouncingEnvelope_init(osp->be, osp->velocity, 0);
 				osp->remaining = ENVELOPE_LENGTH;
 				osp->rflags |= ORF_PERSISTED;
 			}

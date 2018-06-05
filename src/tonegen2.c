@@ -82,6 +82,7 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 }
 
 void startKeyboardScanning(struct b_tonegen *t){
+
   if(t->bt)
     BoardsTopology_delete(t->bt);
   if(t->keys)

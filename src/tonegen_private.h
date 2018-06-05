@@ -41,45 +41,60 @@
 /*
  * The message layout is:
  *  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
- * [ Message  ] [                           Parameter (currently only uses 12 bit)                 ]
- * [0  0  0  0]                             [     velocity     ] [       Key on number             ]
- * [0  0  0  1]                             [     velocity     ] [       Key on number             ]
- * [0  0  1  0]                             [     velocity     ] [      Contact on number          ]
- * [0  0  1  1]                             [     velocity     ] [      Contact on number          ]
+ * [ msg][                                  Parameter(s)                                            ]
+ * [0  0][                                                                Key on number             ] MSG_MKEYON
+ * [0  1][                                                                Key off number            ] MSG_MKEYOFF
+ * [1  0][                 delay             ][     velocity         ][  Contact on number          ] MSG_MCONTACTON (ifdef'ed)
+ * [1  1][                 delay             ][     velocity         ][  Contact off number         ] MSG_MCONTACTOFF (ifdef'ed)
  */
 
 /* Message field access macros */
-#define MSG_MMASK 0xf0000000
-#define MSG_PMASK 0x0fffffff
-#define MSG_VELOCITY_SHIFT 12
-#define MSG_VELOCITY_MASK (0xffff << MSG_VELOCITY_SHIFT)
-#define MSG_NUMBERMASK 0xfff
+#define MSG_MSG_SHIFT 30
+#define MSG_MMASK (0x3 << MSG_MSG_SHIFT)
+#define MSG_PMASK (~MSG_MMASK)
 
-/* Retrive message part from a message */
+/* Retrieve message message type from a message */
 #define MSG_GET_MSG(M) ((M) & MSG_MMASK)
 /* Retrieve parameter part from a message */
 #define MSG_GET_PRM(M) ((M) & MSG_PMASK)
-#define MSG_GET_NUMBER(M) ((M) & MSG_NUMBERMASK)
-#define MSG_GET_VELOCITY(M) (((M) & MSG_VELOCITY_MASK) >> MSG_VELOCITY_SHIFT)
+
 /* Messages */
-#define MSG_MKEYOFF 0x00000000
-#define MSG_MKEYON  0x10000000
+#define MSG_MKEYOFF (0x0 << MSG_MSG_SHIFT)
+#define MSG_MKEYON  (0x1 << MSG_MSG_SHIFT)
 /* Key released message, arg is keynumber */
 #define MSG_KEY_OFF(K) (MSG_MKEYOFF | ((K) & MSG_PMASK))
 /* Key depressed message, arg is keynumber */
 #define MSG_KEY_ON(K)  (MSG_MKEYON  | ((K) & MSG_PMASK))
 
 #ifdef INDIVIDUAL_CONTACTS
-#define MSG_MCONTACTOFF  0x20000000
-#define MSG_MCONTACTON  0x30000000
-/* Contact closed message, args is contactnumber and velocity */
-#define MSG_CONTACT_OFF(C, V)  (MSG_MCONTACTOFF  |\
-								(((V) << MSG_VELOCITY_SHIFT) & MSG_VELOCITY_MASK) |\
-								((C) & MSG_PMASK))
-/* Contact open message, args are contactnumber and velocity */
-#define MSG_CONTACT_ON(C, V)  (MSG_MCONTACTON  |\
-								(((V) << MSG_VELOCITY_SHIFT)  & MSG_VELOCITY_MASK) |\
-								((C) & MSG_PMASK))
+#define MSG_MCONTACTOFF (0x2 << MSG_MSG_SHIFT)
+#define MSG_MCONTACTON (0x3 << MSG_MSG_SHIFT)
+// MSG_MCONTACTON:
+// 10 bits contact number N
+// 8 bits velocity V
+// 12 bits delay D
+// 2 bits message type M
+// | M M D D D D D D | D D D D D D V V | V V V V V V N N | N N N N N N N N |
+#define MSG_NUMBER_SHIFT 0
+#define MSG_NUMBER_MASK (0x3ff << MSG_NUMBER_SHIFT)
+#define MSG_VELOCITY_SHIFT 10
+#define MSG_VELOCITY_MASK (0xff << MSG_VELOCITY_SHIFT)
+#define MSG_DELAY_SHIFT 18
+#define MSG_DELAY_MASK (0xfff << MSG_DELAY_SHIFT)
+
+#define MSG_GET_NUMBER(M) (((M) & MSG_NUMBER_MASK) >> MSG_NUMBER_SHIFT)
+#define MSG_GET_VELOCITY(M) (((M) & MSG_VELOCITY_MASK) >> MSG_VELOCITY_SHIFT)
+#define MSG_GET_DELAY(M) (((M) & MSG_DELAY_MASK) >> MSG_DELAY_SHIFT)
+
+#define MSG_CONTACT_X(M, N, V, D) \
+	(((M) & MSG_MMASK) |\
+	(((D) << MSG_DELAY_SHIFT) & MSG_DELAY_MASK) |\
+	(((V) << MSG_VELOCITY_SHIFT) & MSG_VELOCITY_MASK) |\
+	((N) & MSG_PMASK))
+/* Contact open message, args are contactnumber, velocity and delay*/
+#define MSG_CONTACT_OFF(N, V, D) MSG_CONTACT_X(MSG_MCONTACTOFF, N, V, D)
+/* Contact closed message, args are contactnumber, velocity and delay */
+#define MSG_CONTACT_ON(N, V, D) MSG_CONTACT_X(MSG_MCONTACTON, N, V, D)
 #endif /* INDIVIDUAL_CONTACTS */
 
 

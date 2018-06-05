@@ -3085,7 +3085,7 @@ void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned 
      assert (0 <= t->contactDownCount);
 #endif /* KEYCOMPRESSION */
      /* Write message saying that the key is released */
-     *t->msgQueueWriter++ = MSG_CONTACT_OFF(contactNumber, velocity);
+     *t->msgQueueWriter++ = MSG_CONTACT_OFF(contactNumber, velocity, 0);
      /* Check for wrap on message queue */
      if (t->msgQueueWriter == t->msgQueueEnd) {
        t->msgQueueWriter = t->msgQueue;
@@ -3111,7 +3111,7 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned s
   t->contactDownCount++;
 #endif /* KEYCOMPRESSION */
   /* Write message */
-  *t->msgQueueWriter++ = MSG_CONTACT_ON(contactNumber, velocity);
+  *t->msgQueueWriter++ = MSG_CONTACT_ON(contactNumber, velocity, 0);
   /* Check for wrap on message queue */
   if (t->msgQueueWriter == t->msgQueueEnd) {
     t->msgQueueWriter = t->msgQueue;

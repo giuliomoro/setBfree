@@ -190,6 +190,7 @@ void autoplay(struct b_tonegen *t)
  * there are changes to be made, and human fingers are typically quite
  * slow. Sequencers, however, may put some strain on things.
  */
+#define UNIQUE_ENVELOPE
 void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSamples) {
 	/* auto play */
 	autoplay(t);
@@ -263,11 +264,19 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
           continue;
         int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
         osp = &(t->oscillators[wheelNumber]);
+	//rt_printf("Level: %f refCount: %d\n", LE_LEVEL_OF(lep), t->aot[wheelNumber].refCount);
 
-		osp->velocity = velocity;
+	osp->velocity = velocity;
         if (t->aot[wheelNumber].refCount == 0) {
-          /* Flag the oscillator as added and modified */
-          osp->rflags = OR_ADD;
+		/* Flag the oscillator as added and modified */
+		osp->rflags = ORF_ADDED | ORF_MODIFIED;
+#ifdef UNIQUE_ENVELOPE
+		if(LE_LEVEL_OF(lep) < 0.3) {
+			// the contribution of this oscillator is fairly quiet,
+			// so we are not applying an envelope to it
+			osp->rflags |= ORF_ADDED_NOENV;
+		}
+#endif /* UNIQUE_ENVELOPE */
           /* If not already on the active list, add it */
           if (osp->aclPos == -1) {
             osp->aclPos = t->activeOscLEnd;
@@ -526,16 +535,27 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 #endif /* LONG_ENVELOPES */
       /* Emit instructions for oscillator */
       if (osp->rflags & OR_ADD) {
-        float* env = t->dynamicEnvelopesBuffers[oscNumber];
+	      float* env;
+#ifdef UNIQUE_ENVELOPE
+		if(!(osp->rflags & ORF_ADDED_NOENV))
+		{
+#endif /* UNIQUE_ENVELOPE */
+			env = t->dynamicEnvelopesBuffers[oscNumber];
 #ifdef LONG_ENVELOPES
-		osp->remaining -= BUFFER_SIZE_SAMPLES;
-        if (osp->be == NULL) { // the envelope is not init'd
-		  osp->be = &t->bes[oscNumber];
-		  BouncingEnvelope_init(osp->be, osp->velocity);
-	      //rt_printf("Use attackEnv %3d, velocity: %d\n", i, osp->velocity);
-          osp->remaining = ENVELOPE_LENGTH;
-          osp->rflags |= ORF_PERSISTED;
-        }
+			osp->remaining -= BUFFER_SIZE_SAMPLES;
+			if (osp->be == NULL) { // the envelope is not init'd
+				osp->be = &t->bes[oscNumber];
+				BouncingEnvelope_init(osp->be, osp->velocity);
+				osp->remaining = ENVELOPE_LENGTH;
+				osp->rflags |= ORF_PERSISTED;
+			}
+#ifdef UNIQUE_ENVELOPE
+		} else {
+			osp->remaining = BUFFER_SIZE_SAMPLES;
+			env = t->noenvEnv;
+			osp->be = NULL;
+		}
+#endif /* UNIQUE_ENVELOPE */
         if(osp->be) { //the envelope is already active
 		int verbose = 0;
 #undef LOGSOME

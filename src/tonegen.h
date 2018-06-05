@@ -300,6 +300,7 @@ float dynamicEnvelopesBuffers[NOF_DYNAMIC_ENVELOPES][BUFFER_SIZE_SAMPLES];
 float attackEnv[NUM_ENVELOPES][ENVELOPE_LENGTH]; /**< Attack envelope buffer for 9 buses */
 float* attackEnvEnd[NUM_ENVELOPES];
 float releaseEnv[NUM_ENVELOPES][RELEASE_ENVELOPE_LENGTH];/**< Release envelope buffer for 9 buses */
+float noenvEnv[BUFFER_SIZE_SAMPLES];/**< Attack envelope for quiet oscillator contributions */
 
 
 int envAttackModel;

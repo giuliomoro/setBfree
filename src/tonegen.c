@@ -2549,6 +2549,10 @@ static void initEnvelopes (struct b_tonegen *t) {
   double T = (double) (ENVELOPE_LENGTH - 1);
   double Trelease = (double) (RELEASE_ENVELOPE_LENGTH - 1); /* 127.0 */
 
+	for (i = 0; i < BUFFER_SIZE_SAMPLES; i++) {
+		double a = (M_PI * (double) i) / (double)(BUFFER_SIZE_SAMPLES - 1); /* 0 < b <= PI */
+		t->noenvEnv[i] = 0.5 - (0.5 * cos (a));
+	}
   for (b = 0; b < 9; b++) {
 
     if (t->envAttackModel == ENV_CLICK) {

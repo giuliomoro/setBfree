@@ -1125,7 +1125,7 @@ void midi_panic (void *inst) {
     oscKeyOff (instp->synth, i, i);
   }
   for (i = 0; i < MAX_CONTACTS; ++i) {
-    oscContactOff(instp->synth, i, 0);
+    oscContactOff(instp->synth, i, 0, 0);
   }
 }
 
@@ -1147,12 +1147,12 @@ void process_midi_event(void *instp, const struct bmidi_event_t *ev) {
 	          //oscKeyOn (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],
 	              //map_to_real_key(m, ev->channel, ev->d.tone.note)
             //);
-            oscContactOn(inst->synth, contact, velocity);
+            oscContactOn(inst->synth, contact, velocity, 0);
           } else {
 	          //oscKeyOff (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],
 	              //map_to_real_key(m, ev->channel, ev->d.tone.note)
            //);
-            oscContactOff(inst->synth, contact, velocity);
+            oscContactOff(inst->synth, contact, velocity, 0);
           }
         }
       }
@@ -1165,7 +1165,7 @@ void process_midi_event(void *instp, const struct bmidi_event_t *ev) {
 	//os  cKeyOff (inst->synth, m->keyTable[ev->channel][ev->d.tone.note],
 	      //map_to_real_key(m, ev->channel, ev->d.tone.note)
 	      //);
-        oscContactOff(inst->synth, contact, 0);
+        oscContactOff(inst->synth, contact, 0, 0);
       }
       break;
     case PROGRAM_CHANGE:

@@ -161,6 +161,7 @@ struct _oscillator {
   BouncingEnvelope* be;
   unsigned int remaining;
   short velocity;
+  short envDelay;
 #endif /* LONG_ENVELOPES */
 
   int     aclPos;		/**< Position in active list */
@@ -674,8 +675,8 @@ extern void initToneGenerator (struct b_tonegen *t, void *m);
 extern void freeToneGenerator (struct b_tonegen *t);
 
 #ifdef INDIVIDUAL_CONTACTS
-extern void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity);
-extern void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity);
+extern void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity, unsigned short delay);
+extern void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity, unsigned short delay);
 #endif /* INDIVIDUAL_CONTACTS */
 extern void oscKeyOff (struct b_tonegen *t, unsigned char midiNote, unsigned char realKey);
 extern void oscKeyOn (struct b_tonegen *t, unsigned char midiNote, unsigned char realKey);

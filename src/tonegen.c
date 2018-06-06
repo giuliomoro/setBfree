@@ -2698,7 +2698,7 @@ static void initEnvelopes (struct b_tonegen *t) {
  */
 static void setDrawBar (struct b_tonegen *t, int bus, unsigned int setting) {
   assert ((0 <= bus) && (bus < NOF_BUSES));
-  assert ((0 <= setting) && (setting < 9));
+  assert (setting < 9);
   t->drawBarChange = 1;
   if (bus == t->percTriggerBus) {
     t->percTrigRestore = setting;
@@ -3072,7 +3072,8 @@ void oscKeyOn (struct b_tonegen *t, unsigned char keyNumber, unsigned char realK
 }
 
 #ifdef INDIVIDUAL_CONTACTS
-void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity) {
+void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity, unsigned short delay) {
+	// delay is currently ignored by the receiver
   if (MAX_CONTACTS <= contactNumber) return;
   /* The key must be marked as on */
   if (t->activeContacts[contactNumber] != 0) {
@@ -3085,7 +3086,7 @@ void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned 
      assert (0 <= t->contactDownCount);
 #endif /* KEYCOMPRESSION */
      /* Write message saying that the key is released */
-     *t->msgQueueWriter++ = MSG_CONTACT_OFF(contactNumber, velocity, 0);
+     *t->msgQueueWriter++ = MSG_CONTACT_OFF(contactNumber, velocity, delay);
      /* Check for wrap on message queue */
      if (t->msgQueueWriter == t->msgQueueEnd) {
        t->msgQueueWriter = t->msgQueue;
@@ -3096,12 +3097,12 @@ void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned 
  * This function is the entry point for the MIDI parser when it has received
  * a CONTACT ON message on a channel and note number mapped to a playing key.
  */
-void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity) {
+void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity, unsigned short delay) {
   //rt_printf("contactOn: %d (vel: %d)\n", contactNumber, velocity);
   if (MAX_CONTACTS <= contactNumber) return;
   /* If the contact is already depressed, release it first. */
   if (t->activeContacts[contactNumber] != 0) {
-    oscContactOff (t, contactNumber, 0);
+    oscContactOff (t, contactNumber, 0, 0);
   }
   /* Mark the contact as active */
   t->activeContacts[contactNumber] = 1;
@@ -3111,7 +3112,7 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned s
   t->contactDownCount++;
 #endif /* KEYCOMPRESSION */
   /* Write message */
-  *t->msgQueueWriter++ = MSG_CONTACT_ON(contactNumber, velocity, 0);
+  *t->msgQueueWriter++ = MSG_CONTACT_ON(contactNumber, velocity, delay);
   /* Check for wrap on message queue */
   if (t->msgQueueWriter == t->msgQueueEnd) {
     t->msgQueueWriter = t->msgQueue;

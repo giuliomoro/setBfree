@@ -45,7 +45,7 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
             int contact = make_contact(bus, playingKey);
             float rawVelocity = -(pos[n] - oldOldPos[n]);
             short velocity = (rawVelocity) * 170;
-            oscContactOn(t, contact, velocity);
+            oscContactOn(t, contact, velocity, 0);
           }
           else if(pos[n] > threshold && oldPos[n] <= threshold)
           { // contact was active, we need to turn it off
@@ -53,7 +53,7 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
             int contact = make_contact(bus, playingKey);
             float rawVelocity = -(pos[n] - oldOldPos[n]);
             short velocity = (rawVelocity) * 170;
-            oscContactOff(t, contact, velocity);
+            oscContactOff(t, contact, velocity, 0);
           }
         }
 	  }
@@ -126,12 +126,12 @@ void autoplay(struct b_tonegen *t)
 	int period = 2000;
 	if(count == period / 2 ){
 		for(int n = 0; n < numContacts; ++n)
-			oscContactOff(t, contacts[n], 0);
+			oscContactOff(t, contacts[n], 0, 0);
 	}
 	if(count == 0){
 		static int vel = 1;
 		for(int n = 0; n < numContacts; ++n)
-			oscContactOn(t, contacts[n], vel);
+			oscContactOn(t, contacts[n], vel, delay);
 		vel += 20;
 		if(vel > 127)
 			vel = 1;

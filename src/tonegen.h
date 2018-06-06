@@ -29,7 +29,7 @@
 #include <WriteFile_c.h>
 #include <Keys_c.h>
 
-#define DEBUG_TONEGEN_OSC 1
+#define DEBUG_TONEGEN_OSC 0
 int rt_printf(const char *format, ...);
 
 #ifndef M_PI
@@ -159,7 +159,7 @@ struct _oscillator {
 
 #ifdef LONG_ENVELOPES
   BouncingEnvelope* be;
-  unsigned int remaining;
+  int remaining;
   short velocity;
   short envDelay;
 #endif /* LONG_ENVELOPES */

@@ -115,12 +115,12 @@ void startKeyboardScanning(struct b_tonegen *t){
 void autoplay(struct b_tonegen *t)
 {
 	static int count = 0;
-#define numContacts 1
+#define numContacts 4
 	static int contacts[numContacts] = {0};
 	if(contacts[0] == 0)
 	{
 		for(int n = 0; n < numContacts; ++n)
-			contacts[n] = n + 100;
+			contacts[n] = n * 9+ 100;
 	}
 
 	int period = 2000;
@@ -131,7 +131,11 @@ void autoplay(struct b_tonegen *t)
 	if(count == 0){
 		static int vel = 1;
 		for(int n = 0; n < numContacts; ++n)
+		{
+			unsigned short delay = 4000 / numContacts * n;
 			oscContactOn(t, contacts[n], vel, delay);
+			rt_printf("contact %d on with delay %d\n", contacts[n], delay);
+		}
 		vel += 20;
 		if(vel > 127)
 			vel = 1;
@@ -194,7 +198,7 @@ void autoplay(struct b_tonegen *t)
 #define UNIQUE_ENVELOPE
 void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSamples) {
 	/* auto play */
-	autoplay(t);
+	//autoplay(t);
   // mix inputs to mono and store in the second channel
   if(bufs[1])
   {
@@ -256,7 +260,9 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 
     if (MSG_GET_MSG(msg) == MSG_MCONTACTON) {
       int contactNumber = MSG_GET_NUMBER(msg);
+      //rt_printf("contactNumber: %d. Wheels: ", contactNumber);
       short velocity = MSG_GET_VELOCITY(msg);
+      short delay = MSG_GET_DELAY(msg);
       int busNumber = get_contact_bus(contactNumber);
       int keyNumber = get_contact_key(contactNumber);
       //rt_printf("bus: %d, key: %d\n", get_contact_bus(contactNumber), get_contact_key(contactNumber));
@@ -265,19 +271,15 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
           continue;
         int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
         osp = &(t->oscillators[wheelNumber]);
+	//rt_printf("%3d%s ", (osp - t->oscillators)/sizeof(void*),
+			//LE_LEVEL_OF(lep) > 0.3 ? "*" : " "
+			//);
 	//rt_printf("Level: %f refCount: %d\n", LE_LEVEL_OF(lep), t->aot[wheelNumber].refCount);
 
 	osp->velocity = velocity;
         if (t->aot[wheelNumber].refCount == 0) {
 		/* Flag the oscillator as added and modified */
 		osp->rflags = ORF_ADDED | ORF_MODIFIED;
-#ifdef UNIQUE_ENVELOPE
-		if(LE_LEVEL_OF(lep) < 0.3) {
-			// the contribution of this oscillator is fairly quiet,
-			// so we are not applying an envelope to it
-			osp->rflags |= ORF_ADDED_NOENV;
-		}
-#endif /* UNIQUE_ENVELOPE */
           /* If not already on the active list, add it */
           if (osp->aclPos == -1) {
             osp->aclPos = t->activeOscLEnd;
@@ -286,7 +288,22 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
         }
         else {
           osp->rflags |= ORF_MODIFIED;
+	//rt_printf("%p wheel %d modified with delay %d\n", osp, wheelNumber, delay);
         }
+#ifdef UNIQUE_ENVELOPE
+	if(LE_LEVEL_OF(lep) > 0.3) {
+		// if the contribution is strong enough,
+		// let's make sure the wheel gets an envelope (with delay)
+		osp->rflags |= ORF_ENV;
+		osp->envDelay = delay;
+		//rt_printf("wheel %d on with delay %d\n", wheelNumber, delay);
+	} else {
+		// the contribution of this oscillator is fairly quiet,
+		// so we are not applying an envelope to it (though some other
+		// contact may do so)
+		//rt_printf("wheel %d too quiet (%f), delay: %d\n", wheelNumber, LE_LEVEL_OF(lep), delay);
+	}
+#endif /* UNIQUE_ENVELOPE */
 
         t->aot[wheelNumber].busLevel[LE_BUSNUMBER_OF(lep)] += LE_LEVEL_OF(lep);
         t->aot[wheelNumber].keyCount[LE_BUSNUMBER_OF(lep)] += 1;
@@ -474,7 +491,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
       float sumUpper = 0.0;
       float sumLower = 0.0;
       float sumPedal = 0.0;
-      if ((osp->rflags & (ORF_MODIFIED | ORF_PERSISTED)) || t->drawBarChange) {
+      if ((osp->rflags & (ORF_MODIFIED | ORF_PERSISTED )) || t->drawBarChange) {
         int d;
 
         for (d = UPPER_BUS_LO; d < UPPER_BUS_END; d++) {
@@ -536,28 +553,47 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 #endif /* LONG_ENVELOPES */
       /* Emit instructions for oscillator */
       if (osp->rflags & OR_ADD) {
-	      float* env;
+	      //oscillator has been added or modified, or the envelope is
+	      //persisted from the previous iteration
+              float* env = t->dynamicEnvelopesBuffers[oscNumber]; // may be overridden below, if noenvEnv is assigned instead
+		//rt_printf("%3d_0x%03x_", (osp-t->oscillators)/sizeof(void*), osp->rflags);
+	if(!(osp->rflags & ORF_PERSISTED)) {
+		// the oscillator has just been added or modified
 #ifdef UNIQUE_ENVELOPE
-		if(!(osp->rflags & ORF_ADDED_NOENV))
+		if(osp->rflags & ORF_ENV)
 		{
 #endif /* UNIQUE_ENVELOPE */
-			env = t->dynamicEnvelopesBuffers[oscNumber];
+			// for at least one of the new contributing contacts -
+			// the oscillator has a "strong enough" amplitude: it gets a
+			// fully-featured bouncing envelope (with delay)
 #ifdef LONG_ENVELOPES
 			osp->remaining -= BUFFER_SIZE_SAMPLES;
 			if (osp->be == NULL) { // the envelope is not init'd
+				// TODO: currently it uses the older envelope.
+				// we could think instead of starting a new one when
+				// a more recent envelope is started while the
+				// previous one is still going
 				osp->be = &t->bes[oscNumber];
-				BouncingEnvelope_init(osp->be, osp->velocity, 0);
+				BouncingEnvelope_init(osp->be, osp->velocity, osp->envDelay);
 				osp->remaining = ENVELOPE_LENGTH;
 				osp->rflags |= ORF_PERSISTED;
+				//rt_printf("BouncingEnvelope_init with delay: %d, now: %x\n", osp->envDelay, osp->rflags);
 			}
 #ifdef UNIQUE_ENVELOPE
 		} else {
-			osp->remaining = BUFFER_SIZE_SAMPLES;
+			// the oscillator has no new strong contribution
+			// so it gets a fake envelope
+			// TODO: can we not just skip the envelope altogether?
+			osp->remaining = 0;
 			env = t->noenvEnv;
 			osp->be = NULL;
 		}
+	}
 #endif /* UNIQUE_ENVELOPE */
-        if(osp->be) { //the envelope is already active
+        if(osp->be) { // should be equivalent to (osp->rflags & ORF_PERSISTED)
+		// note ORF_PERSISTED would sometimes get set in the previous if/else
+		//the BouncingEnvelope is already active (either because it has
+		//just been added/modified, or because it has been persisted).
 		int verbose = 0;
 #undef LOGSOME
 #ifdef LOGSOME
@@ -583,11 +619,13 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 			rt_printf("\n");
 		}
 #endif /* LOGSOME */
-          int remaining = (osp->remaining) - BUFFER_SIZE_SAMPLES;
-          if (remaining <= 0) { // the envelope is completed
+	  osp->remaining -= BUFFER_SIZE_SAMPLES;
+          if (osp->remaining <= 0) {
+		  // the envelope is completed
             envelopeCompleted = 1; 
             osp->be = NULL; // deactivate it
             osp->rflags &= ~ORF_PERSISTED; // forget about it
+	    //rt_printf("Cleared %p: %x\n", (osp - t->oscillators)/sizeof(void*), osp->rflags);
           }
         }
 #else /* LONG_ENVELOPES */

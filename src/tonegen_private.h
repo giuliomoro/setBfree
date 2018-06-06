@@ -114,7 +114,7 @@
 
 #ifdef LONG_ENVELOPES
 #define ORF_PERSISTED (1 << 3)
-#define ORF_ADDED_NOENV (1 << 4)
+#define ORF_ENV (1 << 4)
 #define OR_ADD (ORF_MODIFIED | ORF_ADDED | ORF_PERSISTED)
 #define CLEAR_RFLAGS_MASK (ORF_PERSISTED) // OR here those flags that should not be cleared
 #else /* LONG_ENVELOPES */

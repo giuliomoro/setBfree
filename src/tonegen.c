@@ -275,18 +275,30 @@ static void computeClosingDistance(struct b_tonegen* t, unsigned int keys, unsig
 static void contactsSpreadHandler(void *d, unsigned char u)
 {
 	struct b_tonegen *t = (struct b_tonegen *)d;
-	if(u < 40){
-		printf("Changing closing distance: zero\n");
+	t->spreadHandlerUpdating = 1;
+	oscAllOff(d);
+	//very thread-unsafe flag signalling, but whatever
+	if(u < 32){
+		printf("Changing closing distance: zero, no velocity\n");
 		computeClosingDistance(t, 61, 9, 0.3, 0.305, 0);
+		t->contactSpread = kSpreadZeroNoV;
 	}
-	else if(u >= 40 && u < 80){
+	else if(u >= 32 && u < 64){
+		printf("Changing closing distance: zero, velocity\n");
+		computeClosingDistance(t, 61, 9, 0.3, 0.305, 0);
+		t->contactSpread = kSpreadZeroV;
+	}
+	else if(u >= 64 && u < 96){
 		printf("Changing closing distance: normal\n");
 		computeClosingDistance(t, 61, 9, 0.2, 0.4, 0);
+		t->contactSpread = kSpreadNormal;
 	}
-	else if(u > 80){
+	else if(u > 96){
 		printf("Changing closing distance: wide\n");
 		computeClosingDistance(t, 61, 9, 0.05, 0.85, 0);
+		t->contactSpread = kSpreadWide;
 	}
+	t->spreadHandlerUpdating = 0;
 }
 
 
@@ -3010,6 +3022,35 @@ void freeToneGenerator (struct b_tonegen *t) {
  * This function is the entry point for the MIDI parser when it has received
  * a NOTE OFF message on a channel and note number mapped to a playing key.
  */
+#ifdef INDIVIDUAL_CONTACTS
+void oscKeyOff (struct b_tonegen *t, unsigned char key, short velocity) {
+	for(unsigned int bus = 0; bus < NOF_CONTACTS_PER_KEY; ++bus){
+		int contact = make_contact(bus, key);
+		oscContactOff(t, contact, velocity, 0);
+	}
+}
+/**
+ * This function is the entry point for the MIDI parser when it has received
+ * a NOTE ON message on a channel and note number mapped to a playing key.
+ */
+void oscKeyOn (struct b_tonegen *t, unsigned char key, short velocity) {
+	float maxDelay;
+	if(t->contactSpread == kSpreadZeroNoV) {
+		// a random velocity between 60 and 110
+		velocity = 60 + (rand() / (float)RAND_MAX * 50);
+	}
+
+	// inverse linear dependency between closing time offset and "slowness"
+	maxDelay = (127.f / velocity - 1) * 1024.f / 127.f;
+	float delayInc = maxDelay / ((float)NOF_CONTACTS_PER_KEY - 1);
+
+	for(unsigned int bus = 0; bus < NOF_CONTACTS_PER_KEY; ++bus){
+		int delay = bus * delayInc;
+		int contact = make_contact(bus, key);
+		oscContactOn(t, contact, velocity, delay);
+	}
+}
+#else /* INDIVIDUAL_CONTACTS */
 void oscKeyOff (struct b_tonegen *t, unsigned char keyNumber, unsigned char realKey) {
   if (MAX_KEYS <= keyNumber) return;
   /* The key must be marked as on */
@@ -3039,10 +3080,6 @@ void oscKeyOff (struct b_tonegen *t, unsigned char keyNumber, unsigned char real
 
 }
 
-/**
- * This function is the entry point for the MIDI parser when it has received
- * a NOTE ON message on a channel and note number mapped to a playing key.
- */
 void oscKeyOn (struct b_tonegen *t, unsigned char keyNumber, unsigned char realKey) {
   if (MAX_KEYS <= keyNumber) return;
   /* If the key is already depressed, release it first. */
@@ -3070,6 +3107,7 @@ void oscKeyOn (struct b_tonegen *t, unsigned char keyNumber, unsigned char realK
   /*  printf ("\rON :%3d", keyNumber); fflush (stdout); */
 
 }
+#endif /* INDIVIDUAL_CONTACTS */
 
 #ifdef INDIVIDUAL_CONTACTS
 void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity, unsigned short delay) {
@@ -3185,5 +3223,15 @@ const ConfigDoc *oscDoc () {
   return doc;
 }
 
+void oscAllOff(struct b_tonegen* t)
+{
+	int i;
+	for (i=0; i < MAX_KEYS; ++i) {
+		oscKeyOff (t, i, i);
+	}
+	for (i = 0; i < MAX_CONTACTS; ++i) {
+		oscContactOff(t, i, 0, 0);
+	}
+}
 
 /* vi:set ts=8 sts=2 sw=2: */

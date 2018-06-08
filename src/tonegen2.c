@@ -3,10 +3,18 @@
 #include <assert.h>
 #include <stdlib.h>
 //#define OFFLINE
+//#define WRITEFILE
+#ifdef OFFLINE
+#undef WRITEFILE
+#endif
 
 static void postCallback(void* arg, float* buffer, unsigned int length)
 {
-  struct b_tonegen* t = (struct b_tonegen*)arg;
+	struct b_tonegen* t = (struct b_tonegen*)arg;
+	if(t->spreadHandlerUpdating)
+	{
+		return;
+	}
   int mute = 0;
   {
 	Keys* keys = t->keys;
@@ -34,29 +42,44 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
         mute = 1;
     }
 	if(t->elapsedSamples){
-      for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n){
-        for(int bus = 0; bus < NOF_DRAWBARS_PER_MANUAL ; ++bus)
-        {
-          int playingKey = n - FIRST_SOUNDING_KEY;
-          float threshold = contactClosingDistance[playingKey][bus];
-          if(pos[n] <= threshold && oldPos[n] > threshold)
-          { // contact was inactive, we need to turn it on
-            //rt_printf("making contact for key %d\n", n);
-            int contact = make_contact(bus, playingKey);
-            float rawVelocity = -(pos[n] - oldOldPos[n]);
-            short velocity = (rawVelocity) * 170;
-            oscContactOn(t, contact, velocity, 0);
-          }
-          else if(pos[n] > threshold && oldPos[n] <= threshold)
-          { // contact was active, we need to turn it off
-            //rt_printf("breaking contact for key %d\n", n);
-            int contact = make_contact(bus, playingKey);
-            float rawVelocity = -(pos[n] - oldOldPos[n]);
-            short velocity = (rawVelocity) * 170;
-            oscContactOff(t, contact, velocity, 0);
-          }
-        }
-	  }
+		for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n){
+			for(int bus = 0; bus < NOF_DRAWBARS_PER_MANUAL ; ++bus) {
+				int playingKey = n - FIRST_SOUNDING_KEY;
+				float threshold = contactClosingDistance[playingKey][bus];
+				bool onset = false;
+				bool offset = false;
+				if(pos[n] <= threshold && oldPos[n] > threshold)
+				{ // contact was inactive, we need to turn it on
+					onset = true;
+				}
+				else if(pos[n] > threshold && oldPos[n] <= threshold)
+				{ // contact was active, we need to turn it off
+					offset = true;
+				}
+				if(!onset && !offset)
+					continue;
+				float rawVelocity = -(pos[n] - oldOldPos[n]);
+				short velocity = (rawVelocity) * 170;
+				if(t->contactSpread == kSpreadZeroNoV
+					|| t->contactSpread == kSpreadZeroV)
+				{
+					// same triggering point for all busses:
+					// KeyOn / KeyOff
+					if(onset)
+						oscKeyOn(t, n, velocity);
+					else if (offset)
+						oscKeyOff(t, n, velocity);
+					break; // do not check other busses
+				}
+				// individual (per-contact) triggering points:
+				// ContactOn / ContactOff
+				int contact = make_contact(bus, playingKey);
+				if(onset)
+					oscContactOn(t, contact, velocity, 0);
+				else if (offset)
+					oscContactOff(t, contact, velocity, 0);
+			}
+	      }
       ++t->oldPosCurr;
       if(t->oldPosCurr == NUM_OLD_POS)
       	t->oldPosCurr = 0;
@@ -102,12 +125,14 @@ void startKeyboardScanning(struct b_tonegen *t){
   }
   Keys_startTopCalibration(t->keys);
   Keys_loadInverseSquareCalibrationFile(t->keys, "/root/out.calib", 24);
+#ifdef WRITEFILE
   {
 	  WriteFile* file = WriteFile_new();
 	  WriteFile_init(file, "audio_log.bin", false);
 	  WriteFile_setFileType(file, kBinary);
 	  t->audioLogFile = file;
   }
+#endif /* WRITEFILE */
   Keys_setPostCallback(t->keys, postCallback, t);
 #endif /* OFFLINE */
 }
@@ -914,8 +939,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
     t->percEnvGain = t->percEnvGainReset;
   }
 
-//#define OFFLINE
-#ifndef OFFLINE
+#ifdef WRITEFILE
   // log sensors
   {
 	Keys* keys = t->keys;
@@ -925,7 +949,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
     }
     WriteFile_logArray(t->audioLogFile, pos, TOTAL_SCANNER_KEYS);
   }
-#endif /* OFFLINE */
+#endif /* WRITEFILE */
   // make organ sound stereo
   float* y2ptr = bufs[1];
   yptr = bufs[0];
@@ -933,10 +957,10 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
   {
     *y2ptr++ = *yptr++;
   }
-#ifndef OFFLINE
+#ifdef WRITEFILE
   // log audio
   WriteFile_logArray(t->audioLogFile, bufs[0], BUFFER_SIZE_SAMPLES);
   WriteFile_logArray(t->audioLogFile, bufs[1], BUFFER_SIZE_SAMPLES);
-#endif /* OFFLINE */
+#endif /* WRITEFILE */
 } /* oscGenerateFragment */
 

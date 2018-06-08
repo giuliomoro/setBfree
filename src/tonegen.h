@@ -96,6 +96,12 @@ typedef struct deflist_element {
 #define INDIVIDUAL_CONTACTS
 #ifdef INDIVIDUAL_CONTACTS
 #include "contacts.h"
+typedef enum {
+	kSpreadZeroNoV,
+	kSpreadZeroV,
+	kSpreadNormal,
+	kSpreadWide,
+} contactSpread_t;
 #endif /* INDIVIDUAL_CONTACTS */
 
 //#undef LONG_ENVELOPES
@@ -370,6 +376,8 @@ unsigned int activeKeys [MAX_KEYS];
 unsigned int _activeKeys [MAX_KEYS/32];
 
 #ifdef INDIVIDUAL_CONTACTS
+volatile bool spreadHandlerUpdating;
+volatile contactSpread_t contactSpread;
 /*
  * Vector of active contacts, used to correctly manage
  * sounding and non-sounding tones.
@@ -673,13 +681,17 @@ extern int  oscConfig (struct b_tonegen *t, ConfigContext * cfg);
 extern const ConfigDoc *oscDoc ();
 extern void initToneGenerator (struct b_tonegen *t, void *m);
 extern void freeToneGenerator (struct b_tonegen *t);
+void oscAllOff(struct b_tonegen* inst);
 
 #ifdef INDIVIDUAL_CONTACTS
 extern void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity, unsigned short delay);
 extern void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity, unsigned short delay);
-#endif /* INDIVIDUAL_CONTACTS */
+extern void oscKeyOff (struct b_tonegen *t, unsigned char key, short velocity);
+extern void oscKeyOn (struct b_tonegen *t, unsigned char key, short velocity);
+#else /* INDIVIDUAL_CONTACTS */
 extern void oscKeyOff (struct b_tonegen *t, unsigned char midiNote, unsigned char realKey);
 extern void oscKeyOn (struct b_tonegen *t, unsigned char midiNote, unsigned char realKey);
+#endif /* INDIVIDUAL_CONTACTS */
 extern void setDrawBars (void *inst, unsigned int manual, unsigned int setting []);
 extern void oscGenerateFragment (struct b_tonegen *t, float ** buf, size_t lengthSamples);
 

@@ -8,7 +8,7 @@ int main()
 	uint32_t msg;
 	int number = 123;
 	int velocity = 250;
-	int delay = 4090;
+	int delay = 10001;
 	{
 		msg = MSG_CONTACT_ON(number, velocity, delay);
 		unsigned int newM = MSG_GET_MSG(msg);
@@ -18,16 +18,16 @@ int main()
 
 		printf("DELAYMASK %x\n", MSG_DELAY_MASK);
 		printf("%x\n", msg);
-		printf("%s, number: %d (%d), velocity: %d (%d), delay: %d (%d)\n",
+		printf("%s, number: %d (%d), velocity: %d (%d), delay: %d (%d, rounded to nearest %d)\n",
 			newM == MSG_MCONTACTON ? "MSG_MCONTACTON" : "ERROR",
 			number, newN,
 			velocity, newV,
-			delay, newD
+			delay, newD, 1 << MSG_DELAY_VALUE_SHIFT
 		      );
 		assert(newM == MSG_MCONTACTON);
 		assert(number == newN);
 		assert(velocity == newV);
-		assert(delay == newD);
+		assert(delay - delay % (1 << MSG_DELAY_VALUE_SHIFT) == newD);
 	}
 	{
 		msg = MSG_CONTACT_OFF(number, velocity, delay);
@@ -36,16 +36,16 @@ int main()
 		unsigned int newV = MSG_GET_VELOCITY(msg);
 		unsigned int newD = MSG_GET_DELAY(msg);
 
-		printf("%s, number: %d (%d), velocity: %d (%d), delay: %d (%d)\n",
+		printf("%s, number: %d (%d), velocity: %d (%d), delay: %d (%d, rounded to nearest %d)\n",
 			newM == MSG_MCONTACTOFF ? "MSG_MCONTACTOFF" : "ERROR",
 			number, newN,
 			velocity, newV,
-			delay, newD
+			delay, newD, 1 << MSG_DELAY_VALUE_SHIFT
 		      );
 		assert(newM == MSG_MCONTACTOFF);
 		assert(number == newN);
 		assert(velocity == newV);
-		assert(delay == newD);
+		assert(delay - delay % (1 << MSG_DELAY_VALUE_SHIFT) == newD);
 	}
 
 	unsigned int param = 1245;

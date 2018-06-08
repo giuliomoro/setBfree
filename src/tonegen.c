@@ -3041,7 +3041,8 @@ void oscKeyOn (struct b_tonegen *t, unsigned char key, short velocity) {
 	}
 
 	// inverse linear dependency between closing time offset and "slowness"
-	maxDelay = (127.f / velocity - 1) * 1024.f / 127.f;
+	maxDelay = ((127.f / velocity)  + 0.5f ) * 44.1f;
+	//rt_printf("maxDelay: %.1fms, velocity: %d\n", maxDelay * 1000 / 44100, velocity);
 	float delayInc = maxDelay / ((float)NOF_CONTACTS_PER_KEY - 1);
 
 	for(unsigned int bus = 0; bus < NOF_CONTACTS_PER_KEY; ++bus){

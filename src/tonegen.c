@@ -3137,7 +3137,7 @@ void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned 
  * a CONTACT ON message on a channel and note number mapped to a playing key.
  */
 void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned short velocity, unsigned short delay) {
-  //rt_printf("contactOn: %d (vel: %d)\n", contactNumber, velocity);
+  //rt_printf("contactOn: %d (vel: %d, delay: %d)\n", contactNumber, velocity, delay);
   if (MAX_CONTACTS <= contactNumber) return;
   /* If the contact is already depressed, release it first. */
   if (t->activeContacts[contactNumber] != 0) {

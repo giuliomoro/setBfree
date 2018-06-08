@@ -72,7 +72,7 @@
 // MSG_MCONTACTON:
 // 10 bits contact number N
 // 8 bits velocity V
-// 12 bits delay D
+// 12 bits delay D . The stored value is actually (delay >> MSG_DELAY_VALUE_SHIFT)
 // 2 bits message type M
 // | M M D D D D D D | D D D D D D V V | V V V V V V N N | N N N N N N N N |
 #define MSG_NUMBER_SHIFT 0
@@ -80,15 +80,16 @@
 #define MSG_VELOCITY_SHIFT 10
 #define MSG_VELOCITY_MASK (0xff << MSG_VELOCITY_SHIFT)
 #define MSG_DELAY_SHIFT 18
+#define MSG_DELAY_VALUE_SHIFT 2
 #define MSG_DELAY_MASK (0xfff << MSG_DELAY_SHIFT)
 
 #define MSG_GET_NUMBER(M) (((M) & MSG_NUMBER_MASK) >> MSG_NUMBER_SHIFT)
 #define MSG_GET_VELOCITY(M) (((M) & MSG_VELOCITY_MASK) >> MSG_VELOCITY_SHIFT)
-#define MSG_GET_DELAY(M) (((M) & MSG_DELAY_MASK) >> MSG_DELAY_SHIFT)
+#define MSG_GET_DELAY(M) (((M) & MSG_DELAY_MASK) >> (MSG_DELAY_SHIFT - MSG_DELAY_VALUE_SHIFT))
 
 #define MSG_CONTACT_X(M, N, V, D) \
 	(((M) & MSG_MMASK) |\
-	(((D) << MSG_DELAY_SHIFT) & MSG_DELAY_MASK) |\
+	(((D >> MSG_DELAY_VALUE_SHIFT) << MSG_DELAY_SHIFT) & MSG_DELAY_MASK) |\
 	(((V) << MSG_VELOCITY_SHIFT) & MSG_VELOCITY_MASK) |\
 	((N) & MSG_PMASK))
 /* Contact open message, args are contactnumber, velocity and delay*/

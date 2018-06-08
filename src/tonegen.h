@@ -165,7 +165,6 @@ struct _oscillator {
 
 #ifdef LONG_ENVELOPES
   BouncingEnvelope* be;
-  int remaining;
   short velocity;
   short envDelay;
 #endif /* LONG_ENVELOPES */

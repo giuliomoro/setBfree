@@ -592,7 +592,6 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 			// the oscillator has a "strong enough" amplitude: it gets a
 			// fully-featured bouncing envelope (with delay)
 #ifdef LONG_ENVELOPES
-			osp->remaining -= BUFFER_SIZE_SAMPLES;
 			if (osp->be == NULL) { // the envelope is not init'd
 				// TODO: currently it uses the older envelope.
 				// we could think instead of starting a new one when
@@ -600,7 +599,6 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 				// previous one is still going
 				osp->be = &t->bes[oscNumber];
 				BouncingEnvelope_init(osp->be, osp->velocity, osp->envDelay);
-				osp->remaining = ENVELOPE_LENGTH;
 				osp->rflags |= ORF_PERSISTED;
 				//rt_printf("BouncingEnvelope_init with delay: %d, now: %x\n", osp->envDelay, osp->rflags);
 			}
@@ -609,7 +607,6 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 			// the oscillator has no new strong contribution
 			// so it gets a fake envelope
 			// TODO: can we not just skip the envelope altogether?
-			osp->remaining = 0;
 			env = t->noenvEnv;
 			osp->be = NULL;
 		}
@@ -632,7 +629,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 			verbose = 1;
 		}
 #endif /* LOGSOME */
-		BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env, verbose);
+		int remaining = BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env, verbose);
 #ifdef LOGSOME
 		if(osp == ptr)
 		{
@@ -644,8 +641,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 			rt_printf("\n");
 		}
 #endif /* LOGSOME */
-	  osp->remaining -= BUFFER_SIZE_SAMPLES;
-          if (osp->remaining <= 0) {
+          if (remaining <= 0) {
 		  // the envelope is completed
             envelopeCompleted = 1; 
             osp->be = NULL; // deactivate it

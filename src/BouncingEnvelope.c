@@ -36,6 +36,10 @@ static float tri(float phase)
 
 void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int delay)
 {	
+	if(delay > 1024)
+		be->remaining = delay;
+	else
+		be->remaining = 1024;
 	be->delay = delay;
 	be->amplitude = velocity / 127.f;
 	if(be->amplitude < 0)
@@ -43,16 +47,16 @@ void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int de
 	be->contactPosition = be->amplitude;
 	be->highThreshold = 0.2;
 	be->lowThreshold = 0.015;
-	static unsigned int ran = 1;
 	be->phase = 0;
 	be->phaseStep = 1302.f / 44100; // bounce frequency / samplerate
 	be->e = 0.7;
 	be->contactState = open;
 }
 
-void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buffer, int verbose/*, float* position*/)
+int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buffer, int verbose/*, float* position*/)
 {
 	//rt_printf("_step %p \n", be);
+	be->remaining -= length;
 	int start;
 	if(be->delay >= length) {
 		start = length;
@@ -71,7 +75,7 @@ void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buf
 		// no bounce to be generated,
 		// let's return early to avoid useless
 		// copy operations
-		return;
+		return be->remaining;
 	}
 	float amplitude = be->amplitude;
 	float phase = be->phase;
@@ -113,5 +117,6 @@ void BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buf
 	be->contactPosition = contactPosition;
 	be->phase = phase;
 	be->contactState = contactState;
+	return be->remaining;
 }
 

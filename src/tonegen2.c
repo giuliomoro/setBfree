@@ -629,7 +629,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 			verbose = 1;
 		}
 #endif /* LOGSOME */
-		int remaining = BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env, verbose);
+		int remaining = BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env);
 #ifdef LOGSOME
 		if(osp == ptr)
 		{

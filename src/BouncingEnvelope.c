@@ -53,7 +53,7 @@ void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int de
 	be->contactState = open;
 }
 
-int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buffer, int verbose/*, float* position*/)
+int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buffer)
 {
 	//rt_printf("_step %p \n", be);
 	be->remaining -= length;
@@ -75,7 +75,7 @@ int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buff
 		// no bounce to be generated,
 		// let's return early to avoid useless
 		// copy operations
-		return be->remaining;
+		return -1;
 	}
 	float amplitude = be->amplitude;
 	float phase = be->phase;
@@ -117,6 +117,6 @@ int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buff
 	be->contactPosition = contactPosition;
 	be->phase = phase;
 	be->contactState = contactState;
-	return be->remaining;
+	return be->remaining > 0 ? be->remaining : 0;
 }
 

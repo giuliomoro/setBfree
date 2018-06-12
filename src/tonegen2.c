@@ -618,7 +618,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 		//just been added/modified, or because it has been persisted).
 		int verbose = 0;
 		int remaining = BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env);
-          if (remaining <= 0) {
+          if (remaining == 0) {
 		  // the envelope is completed
             envelopeCompleted = 1; 
             osp->be = NULL; // deactivate it

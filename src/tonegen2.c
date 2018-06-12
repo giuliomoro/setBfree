@@ -574,9 +574,10 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
     } /* if rerouting */
 
 #ifdef LONG_ENVELOPES
-      short envelopeCompleted = 0;
+	short envelopeCompleted = 0;
 #endif /* LONG_ENVELOPES */
 	/* Emit instructions for oscillator */
+	int useEnv = 0;
 	if (osp->rflags & OR_ADD) {
 		//oscillator has been added or modified, or the envelope is
 		//persisted from the previous iteration
@@ -606,8 +607,10 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 			} else {
 				// the oscillator has no new strong contribution
 				// so it gets a fake envelope
-				// TODO: can we not just skip the envelope altogether?
+				// TODO: we should instead skip this altogether
+				// if noenvEnv is going to be full of zeros
 				env = t->noenvEnv;
+				useEnv = 1;
 				osp->be = NULL;
 			}
 		}
@@ -618,40 +621,55 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 			//just been added/modified, or because it has been persisted).
 			int verbose = 0;
 			int remaining = BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env);
+			if (remaining >= 0)
+				useEnv = 1;
 			if (remaining == 0) {
 				// the envelope is completed
 				envelopeCompleted = 1; 
 				osp->be = NULL; // deactivate it
 				osp->rflags &= ~ORF_PERSISTED; // forget about it
 				//rt_printf("Cleared %p: %x\n", (osp - t->oscillators)/sizeof(void*), osp->rflags);
-			}
-		}
+			} // if (remaining == 0)
+		} // if(osp->be)
 #else /* LONG_ENVELOPES */
 		env = t->attackEnv[i & 7];
+		useEnv = 1;
 #endif /* LONG_ENVELOPES */
-
-		/* Envelope attack instruction */
-		t->coreWriter->env = env;
 
 		/* Next gain values */
 		t->coreWriter->nsgain = sumSwell;
 		t->coreWriter->npgain = sumPercn;
 		t->coreWriter->nvgain = sumScanr;        
 
-		if (copyDone) {
-			t->coreWriter->opr = CR_ADDENV;
-		}
-		else {
-			t->coreWriter->opr = CR_CPYENV;
-			copyDone = 1;
-		}
+		if(useEnv)
+		{
+			/* Envelope attack instruction */
+			t->coreWriter->env = env;
+
+			if (copyDone) {
+				t->coreWriter->opr = CR_ADDENV;
+			}
+			else {
+				t->coreWriter->opr = CR_CPYENV;
+				copyDone = 1;
+			}
+		} else { // useEnv
+			//pointless to multiply times 0: let's generate non-ENV instructions
+			if (copyDone) {
+				t->coreWriter->opr = CR_ADD;
+			}
+			else {
+				t->coreWriter->opr = CR_CPY;
+				copyDone = 1;
+			}
+		} // useEnv
 	} //if (osp->rflags & OR_ADD)
 	else {
 //this means if osp->rflags did not contain ORF_MODIFIED, ORF_ADDED or
 //ORF_PERSISTED but also not ORF_REMOVED, so this is just a plain-old boring
 //oscillator that is still playing from the past with no envelopes
 #ifdef LONG_ENVELOPES
-		envelopeCompleted = 1; 
+		envelopeCompleted = 1; // as such, it gets an envelopeCompleted flag!
 #endif /* LONG_ENVELOPES */
 		if (copyDone) {
 			t->coreWriter->opr = CR_ADD;

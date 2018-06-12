@@ -617,30 +617,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 		//the BouncingEnvelope is already active (either because it has
 		//just been added/modified, or because it has been persisted).
 		int verbose = 0;
-#undef LOGSOME
-#ifdef LOGSOME
-		static void* ptr = 0;
-		if(ptr == 0)
-		{
-			ptr = osp;
-		}
-		if(osp == ptr)
-		{
-			verbose = 1;
-		}
-#endif /* LOGSOME */
 		int remaining = BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env);
-#ifdef LOGSOME
-		if(osp == ptr)
-		{
-			rt_printf("%d ", osp->velocity);
-			for(int n = 0; n < BUFFER_SIZE_SAMPLES; ++n)
-			{
-				rt_printf("%.0f", env[n]);
-			}
-			rt_printf("\n");
-		}
-#endif /* LOGSOME */
           if (remaining <= 0) {
 		  // the envelope is completed
             envelopeCompleted = 1; 

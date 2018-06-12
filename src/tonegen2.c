@@ -576,100 +576,103 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 #ifdef LONG_ENVELOPES
       short envelopeCompleted = 0;
 #endif /* LONG_ENVELOPES */
-      /* Emit instructions for oscillator */
-      if (osp->rflags & OR_ADD) {
-	      //oscillator has been added or modified, or the envelope is
-	      //persisted from the previous iteration
-              float* env = t->dynamicEnvelopesBuffers[oscNumber]; // may be overridden below, if noenvEnv is assigned instead
+	/* Emit instructions for oscillator */
+	if (osp->rflags & OR_ADD) {
+		//oscillator has been added or modified, or the envelope is
+		//persisted from the previous iteration
+		float* env = t->dynamicEnvelopesBuffers[oscNumber]; // may be overridden below, if noenvEnv is assigned instead
 		//rt_printf("%3d_0x%03x_", (osp-t->oscillators)/sizeof(void*), osp->rflags);
-	if(!(osp->rflags & ORF_PERSISTED)) {
-		// the oscillator has just been added or modified
+		if(!(osp->rflags & ORF_PERSISTED)) {
+			// the oscillator has just been added or modified
 #ifdef UNIQUE_ENVELOPE
-		if(osp->rflags & ORF_ENV)
-		{
+			if(osp->rflags & ORF_ENV)
+			{
 #endif /* UNIQUE_ENVELOPE */
-			// for at least one of the new contributing contacts -
-			// the oscillator has a "strong enough" amplitude: it gets a
-			// fully-featured bouncing envelope (with delay)
+				// for at least one of the new contributing contacts -
+				// the oscillator has a "strong enough" amplitude: it gets a
+				// fully-featured bouncing envelope (with delay)
 #ifdef LONG_ENVELOPES
-			if (osp->be == NULL) { // the envelope is not init'd
-				// TODO: currently it uses the older envelope.
-				// we could think instead of starting a new one when
-				// a more recent envelope is started while the
-				// previous one is still going
-				osp->be = &t->bes[oscNumber];
-				BouncingEnvelope_init(osp->be, osp->velocity, osp->envDelay);
-				osp->rflags |= ORF_PERSISTED;
-				//rt_printf("BouncingEnvelope_init with delay: %d, now: %x\n", osp->envDelay, osp->rflags);
-			}
+				if (osp->be == NULL) { // the envelope is not init'd
+					// TODO: currently it uses the older envelope.
+					// we could think instead of starting a new one when
+					// a more recent envelope is started while the
+					// previous one is still going
+					osp->be = &t->bes[oscNumber];
+					BouncingEnvelope_init(osp->be, osp->velocity, osp->envDelay);
+					osp->rflags |= ORF_PERSISTED;
+					//rt_printf("BouncingEnvelope_init with delay: %d, now: %x\n", osp->envDelay, osp->rflags);
+				}
 #ifdef UNIQUE_ENVELOPE
-		} else {
-			// the oscillator has no new strong contribution
-			// so it gets a fake envelope
-			// TODO: can we not just skip the envelope altogether?
-			env = t->noenvEnv;
-			osp->be = NULL;
+			} else {
+				// the oscillator has no new strong contribution
+				// so it gets a fake envelope
+				// TODO: can we not just skip the envelope altogether?
+				env = t->noenvEnv;
+				osp->be = NULL;
+			}
 		}
-	}
 #endif /* UNIQUE_ENVELOPE */
-        if(osp->be) { // should be equivalent to (osp->rflags & ORF_PERSISTED)
-		// note ORF_PERSISTED would sometimes get set in the previous if/else
-		//the BouncingEnvelope is already active (either because it has
-		//just been added/modified, or because it has been persisted).
-		int verbose = 0;
-		int remaining = BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env);
-          if (remaining == 0) {
-		  // the envelope is completed
-            envelopeCompleted = 1; 
-            osp->be = NULL; // deactivate it
-            osp->rflags &= ~ORF_PERSISTED; // forget about it
-	    //rt_printf("Cleared %p: %x\n", (osp - t->oscillators)/sizeof(void*), osp->rflags);
-          }
-        }
+		if(osp->be) { // should be equivalent to (osp->rflags & ORF_PERSISTED)
+			// note ORF_PERSISTED would sometimes get set in the previous if/else
+			//the BouncingEnvelope is already active (either because it has
+			//just been added/modified, or because it has been persisted).
+			int verbose = 0;
+			int remaining = BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env);
+			if (remaining == 0) {
+				// the envelope is completed
+				envelopeCompleted = 1; 
+				osp->be = NULL; // deactivate it
+				osp->rflags &= ~ORF_PERSISTED; // forget about it
+				//rt_printf("Cleared %p: %x\n", (osp - t->oscillators)/sizeof(void*), osp->rflags);
+			}
+		}
 #else /* LONG_ENVELOPES */
-        env = t->attackEnv[i & 7];
+		env = t->attackEnv[i & 7];
 #endif /* LONG_ENVELOPES */
 
-        /* Envelope attack instruction */
-        t->coreWriter->env = env;
+		/* Envelope attack instruction */
+		t->coreWriter->env = env;
 
-        /* Next gain values */
-        t->coreWriter->nsgain = sumSwell;
-        t->coreWriter->npgain = sumPercn;
-        t->coreWriter->nvgain = sumScanr;        
+		/* Next gain values */
+		t->coreWriter->nsgain = sumSwell;
+		t->coreWriter->npgain = sumPercn;
+		t->coreWriter->nvgain = sumScanr;        
 
-        if (copyDone) {
-          t->coreWriter->opr = CR_ADDENV;
-        }
-        else {
-          t->coreWriter->opr = CR_CPYENV;
-          copyDone = 1;
-        }
-      }
-      else {
+		if (copyDone) {
+			t->coreWriter->opr = CR_ADDENV;
+		}
+		else {
+			t->coreWriter->opr = CR_CPYENV;
+			copyDone = 1;
+		}
+	} //if (osp->rflags & OR_ADD)
+	else {
+//this means if osp->rflags did not contain ORF_MODIFIED, ORF_ADDED or
+//ORF_PERSISTED but also not ORF_REMOVED, so this is just a plain-old boring
+//oscillator that is still playing from the past with no envelopes
 #ifdef LONG_ENVELOPES
 		envelopeCompleted = 1; 
 #endif /* LONG_ENVELOPES */
-        if (copyDone) {
-          t->coreWriter->opr = CR_ADD;
-        }
-        else {
-          t->coreWriter->opr = CR_CPY;
-          copyDone = 1;
-        }
-      }
+		if (copyDone) {
+			t->coreWriter->opr = CR_ADD;
+		}
+		else {
+			t->coreWriter->opr = CR_CPY;
+			copyDone = 1;
+		}
+	}
 
 #ifdef LONG_ENVELOPES
-      if (envelopeCompleted || !(osp->rflags & ORF_PERSISTED)) { // the envelope is completed, store the values
+	if (envelopeCompleted || !(osp->rflags & ORF_PERSISTED)) { // the envelope is completed, store the values
 #endif /* LONG_ENVELOPES */
-        aop->sumUpper = sumUpper;
-        aop->sumLower = sumLower;
-        aop->sumPedal = sumPedal;
-        aop->sumSwell = sumSwell;
-        aop->sumScanr = sumScanr;
-        aop->sumPercn = sumPercn;
+		aop->sumUpper = sumUpper;
+		aop->sumLower = sumLower;
+		aop->sumPedal = sumPedal;
+		aop->sumSwell = sumSwell;
+		aop->sumScanr = sumScanr;
+		aop->sumPercn = sumPercn;
 #ifdef LONG_ENVELOPES
-      }
+	}
 #endif /* LONG_ENVELOPES */
 
 
@@ -689,7 +692,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
         t->coreWriter->opr = prev->opr; /* Same operation */
         t->coreWriter->src = osp->wave; /* Start of wave because of wrap */
         t->coreWriter->off = prev->cnt;
-        if (t->coreWriter->opr & 2) {
+        if (t->coreWriter->opr & CR_ENV_INS) { // if it has an envelope
           t->coreWriter->env = prev->env + prev->cnt; /* Continue envelope */
         }
         /* The gains are identical to the previous instruction */
@@ -702,8 +705,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
         t->coreWriter->nvgain = prev->nvgain;
 
         t->coreWriter->cnt = osp->pos; /* Up to next read position */
-      }
-      else {
+      } else { // instruction does not wrap the source buffer
         t->coreWriter->cnt = BUFFER_SIZE_SAMPLES;
         osp->pos += BUFFER_SIZE_SAMPLES;
       }

@@ -66,9 +66,9 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 					// same triggering point for all busses:
 					// KeyOn / KeyOff
 					if(onset)
-						oscKeyOn(t, n, velocity);
+						oscKeyOn(t, playingKey, velocity);
 					else if (offset)
-						oscKeyOff(t, n, velocity);
+						oscKeyOff(t, playingKey, velocity);
 					break; // do not check other busses
 				}
 				// individual (per-contact) triggering points:

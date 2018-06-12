@@ -3043,12 +3043,24 @@ void oscKeyOn (struct b_tonegen *t, unsigned char key, short velocity) {
 	// inverse linear dependency between closing time offset and "slowness"
 	maxDelay = ((127.f / velocity)  + 0.5f ) * 44.1f;
 	//rt_printf("maxDelay: %.1fms, velocity: %d\n", maxDelay * 1000 / 44100, velocity);
-	float delayInc = maxDelay / ((float)NOF_CONTACTS_PER_KEY - 1);
-
-	for(unsigned int bus = 0; bus < NOF_CONTACTS_PER_KEY; ++bus){
-		int delay = bus * delayInc;
-		int contact = make_contact(bus, key);
-		oscContactOn(t, contact, velocity, delay);
+	const int numberSteps = 5;
+	float delayInc = maxDelay / ((float)numberSteps - 1);
+	srand(key);
+	uint16_t contactOrder[NOF_CONTACTS_PER_KEY];
+	// decide at what step each contact will close
+	for(unsigned int bus = 0; bus < NOF_CONTACTS_PER_KEY; ++bus)
+	{
+		contactOrder[bus] = rand() / (float)RAND_MAX * numberSteps;
+	}
+	for(int n = 0; n < numberSteps; ++n) {
+		int delay = n * delayInc;
+		for(unsigned int bus = 0; bus < NOF_CONTACTS_PER_KEY; ++bus) {
+			if(contactOrder[bus] == n)
+			{
+				int contact = make_contact(bus, key);
+				oscContactOn(t, contact, velocity, delay);
+			}
+		}
 	}
 }
 #else /* INDIVIDUAL_CONTACTS */

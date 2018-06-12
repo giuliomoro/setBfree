@@ -619,7 +619,6 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 			// note ORF_PERSISTED would sometimes get set in the previous if/else
 			//the BouncingEnvelope is already active (either because it has
 			//just been added/modified, or because it has been persisted).
-			int verbose = 0;
 			int remaining = BouncingEnvelope_step(osp->be, BUFFER_SIZE_SAMPLES, env);
 			if (remaining >= 0)
 				useEnv = 1;

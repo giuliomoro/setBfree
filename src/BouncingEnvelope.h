@@ -25,9 +25,9 @@ void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int de
  * Compute a step.
  * @param length the length of the step to compute.
  * @param buffer the output buffer
- * @return the number of samples left to be retrieved, 0 in case there are no
- * samples left, or -1 if the delay has not expired yet. If -1 is returned, then
- * the content of buffer is not changed and the caller should not use it.
+ * @return 1 if the envelope has produced a useful output in buffer and is not complete,
+ * 0 in case it produced a useful output uin buffer and it is completed,
+ * -1 if the delay has not expired yet, and the content of buffer has not been changed
  */
 int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buffer);
 

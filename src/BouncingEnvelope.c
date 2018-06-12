@@ -34,12 +34,18 @@ static float tri(float phase)
 		return 1.f - phase * 2.f;
 }
 
+// the actual length will be defined by the amplitude: once the amplitude
+// is below the lowThreshold, then we are done.
+// So, there is no real good reason for having a maxEnvLength, except to avoid
+// troubles in case  you set the lowThreshold too low
+#define maxEnvLength 2048 // max length of the envelope (after delay)
+
 void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int delay)
 {	
-	if(delay > 1024)
+	if(delay > maxEnvLength)
 		be->remaining = delay;
 	else
-		be->remaining = 1024;
+		be->remaining = maxEnvLength;
 	be->delay = delay;
 	be->amplitude = velocity / 127.f;
 	if(be->amplitude < 0)
@@ -56,27 +62,22 @@ void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int de
 int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buffer)
 {
 	//rt_printf("_step %p \n", be);
-	be->remaining -= length;
 	int start;
 	if(be->delay >= length) {
 		start = length;
 		be->delay -= length;
+		// no bounce to be generated, yet.
+		// let's return early to avoid useless
+		// copy operations
+		return -1;
 	} else {
 		start = be->delay;
 		be->delay = 0;
-		//rt_printf("delay %d then we go\n", be->delay);
+		be->remaining -= length; // only decrement after delay
 	}
 	// if there is a delay still going, we fill
 	// the head of env with 0
 	memset(buffer, 0, sizeof(buffer[0]) * start);
-	if(start == length)
-	{
-		//rt_printf("Returning, still %d to go\n", be->delay);
-		// no bounce to be generated,
-		// let's return early to avoid useless
-		// copy operations
-		return -1;
-	}
 	float amplitude = be->amplitude;
 	float phase = be->phase;
 	float contactState = be->contactState;
@@ -117,6 +118,11 @@ int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buff
 	be->contactPosition = contactPosition;
 	be->phase = phase;
 	be->contactState = contactState;
-	return be->remaining > 0 ? be->remaining : 0;
+	if(be->amplitude < be->lowThreshold || be->remaining <= 0)
+	{
+		return 0; // no more bouncing will happen, let's call it quits
+	} else {
+		return 1; // more bouncing to be expected
+	}
 }
 

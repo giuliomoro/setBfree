@@ -410,6 +410,15 @@ Keys* keys;
  * The topology of the boards connected
  */
 BoardsTopology* bt;
+
+/*
+ * How much to rescale the envelope
+ */
+float contactEnvelopeScale;
+/*
+ * How quickly to ramp up the envelope (see BouncingEnvelope.c)
+ */
+unsigned int contactEnvelopeRampTime;
 #endif /* INDIVIDUAL_CONTACTS */
 
 /*

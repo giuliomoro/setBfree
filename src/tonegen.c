@@ -273,8 +273,23 @@ static void computeClosingDistance(struct b_tonegen* t, unsigned int keys, unsig
 }
 
 extern int gEnvelopeFilter;
+static void contactScaleHandler(void *d, unsigned char u)
+{
+	struct b_tonegen *t = (struct b_tonegen *)d;
+	float scale = u / 127.f;
+	t->contactEnvelopeScale = scale;
+	rt_printf("contactScale: %f\n", scale);
+}
+static void contactRampTimeHandler(void *d, unsigned char u)
+{
+	struct b_tonegen *t = (struct b_tonegen *)d;
+	unsigned int rampTime = u * 4;
+	t->contactEnvelopeRampTime = rampTime;
+	rt_printf("contactRampTime: %u\n", rampTime);
+}
 static void contactFilterHandler(void *d, unsigned char u)
 {
+	rt_printf("contactFilterHandler: %u\n", u);
 	gEnvelopeFilter = u;
 }
 static void contactsSpreadHandler(void *d, unsigned char u)
@@ -430,6 +445,8 @@ static void initValues (struct b_tonegen *t) {
       t->oldPos[k][n] = 1;
     }
   }
+  t->contactEnvelopeScale = 0.3;
+  t->contactEnvelopeRampTime = 200;
 #endif /* INDIVIDUAL_CONTACTS */
 
 #ifdef HIPASS_PERCUSSION
@@ -2995,6 +3012,8 @@ void initToneGenerator (struct b_tonegen *t, void *m) {
   useMIDIControlFunction (m, "volume.mute", toggleMute, t);
   useMIDIControlFunction (m, "contacts.spread", contactsSpreadHandler, t);
   useMIDIControlFunction (m, "contacts.filter", contactFilterHandler, t);
+  useMIDIControlFunction (m, "contacts.scale", contactScaleHandler, t);
+  useMIDIControlFunction (m, "contacts.rampTime", contactRampTimeHandler, t);
 
 #if DEBUG_TONEGEN_OSC
   dumpOscToText (t, "osc.txt");

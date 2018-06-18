@@ -601,7 +601,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 					// a more recent envelope is started while the
 					// previous one is still going
 					osp->be = &t->bes[oscNumber];
-					BouncingEnvelope_init(osp->be, osp->velocity, osp->envDelay);
+					BouncingEnvelope_init(osp->be, osp->velocity, osp->envDelay, t->contactEnvelopeScale, t->contactEnvelopeRampTime);
 					osp->rflags |= ORF_PERSISTED;
 					//rt_printf("BouncingEnvelope_init with delay: %d, now: %x\n", osp->envDelay, osp->rflags);
 				}

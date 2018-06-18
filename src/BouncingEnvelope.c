@@ -6,7 +6,7 @@
 #include <limits.h>
 #include <string.h>
 
-int gEnvelopeFilter = 1;
+int gEnvelopeFilter = 0;
 /* The state word must be initialized to non-zero */
 uint32_t xorshift32(uint32_t state[static 1])
 {
@@ -35,13 +35,30 @@ static float tri(float phase)
 		return 1.f - phase * 2.f;
 }
 
+// inverse function of triangular oscillator
+static float arctri(float value)
+{
+	float phase;
+	if(value > 0)
+	{
+		// assume first quadrant
+		// value = 1 - phase * 2;
+		phase = (1 - value) / 2.f;
+	} else {
+		// assume fourth quadrant
+		// value = 1.f + 2.f * phase;
+		phase = (value - 1.f) / 2.f;
+	}
+	return phase;
+}
 // the actual length will be defined by the amplitude: once the amplitude
 // is below the lowThreshold, then we are done.
 // So, there is no real good reason for having a maxEnvLength, except to avoid
 // troubles in case  you set the lowThreshold too low
-#define maxEnvLength 2048 // max length of the envelope (after delay)
+#define maxEnvLength 8192 // max length of the envelope (after delay)
+#define envPeriod 1302.f
 
-void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int delay)
+void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int delay, float scale, unsigned int rampTime)
 {	
 	if(delay > maxEnvLength)
 		be->remaining = delay;
@@ -51,13 +68,22 @@ void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int de
 	be->amplitude = velocity / 127.f;
 	if(be->amplitude < 0)
 		be->amplitude = 0;
-	be->contactPosition = be->amplitude;
 	be->highThreshold = 0.2;
 	be->lowThreshold = 0.015;
-	be->phase = 0;
-	be->phaseStep = 1302.f / 44100; // bounce frequency / samplerate
+	be->phase = arctri(be->highThreshold); // initialize so that bouncing starts immediately ( after delay!)
+	be->phaseStep = envPeriod / 44100; // bounce frequency / samplerate
 	be->e = 0.7;
 	be->contactState = open;
+	be->pastContactState = open;
+	be->rampValue = 0;
+	be->elapsed = 0;
+	//be->scale = 0.3;
+	be->scale = scale;
+	//be->rampTime could be estimated automatically from amplitude and e
+	be->rampTime = rampTime;
+	float rampTarget = 1.f - be->scale;
+	be->rampStep = rampTarget / be->rampTime;
+	rt_printf("scale: %f, step: %f, rampTime: %d\n", be->scale, be->rampStep, be->rampTime);
 	memset(be->pastIn, BE_FILTER_SIZE * sizeof(float), 0);
 	memset(be->pastOut, BE_FILTER_SIZE * sizeof(float), 0);
 }
@@ -97,6 +123,7 @@ int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buff
 		start = (be->delay & (MIN_CONTACT_PERIOD - 1)); // make sure start is a multiple of MIN_CONTACT_PERIOD
 		be->delay = 0;
 		be->remaining -= length; // only decrement after delay
+		be->elapsed += length - start;
 	}
 	// if there is a delay still going, we fill
 	// the head of env with 0
@@ -142,11 +169,20 @@ int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buff
 		}
 		be->pastContactState = contactState;
 	}
-	// apply filter
-	int idx = gEnvelopeFilter / 128.f * (sizeof(Bn) / sizeof(float) / 3);
+	//
+	// apply low pass filter
+	int idx = gEnvelopeFilter / 128.f * (sizeof(Bn) / (sizeof(float) * 3));
 	float* B = Bn[idx];
 	float* A = An[idx];
-	
+
+	for(unsigned int n = start; n < length; ++n)
+	{
+		buffer[n] = buffer[n] * be->scale + be->rampValue;
+		be->rampValue += be->rampStep;
+		if(be->rampValue > 1 - be->scale) // limit excursion by ramping up
+			be->rampValue = 1 - be->scale;
+	}
+
 	for(unsigned int n = start; n < length; ++n)
 	{
 		float* pastIn = be->pastIn;
@@ -161,10 +197,9 @@ int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buff
 		buffer[n] = out;
 	}
 	be->amplitude = amplitude;
-	be->contactPosition = contactPosition;
 	be->phase = phase;
 	be->contactState = contactState;
-	if(be->amplitude < be->lowThreshold || be->remaining <= 0)
+	if(be->elapsed > be->rampTime && ( be->amplitude < be->lowThreshold || be->remaining <= 0))
 	{
 		return 0; // no more bouncing will happen, let's call it quits
 	} else {

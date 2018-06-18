@@ -165,6 +165,9 @@ static const char * ccFuncNames[] = {
   "volume.mute",
   "contacts.spread",
   "contacts.filter",
+  "contacts.filter",
+  "contacts.scale",
+  "contacts.rampTime",
 
   NULL
 };

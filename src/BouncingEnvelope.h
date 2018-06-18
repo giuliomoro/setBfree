@@ -7,24 +7,33 @@ typedef struct _bouncingEnvelope{
 	float e; /* restitution coefficient */
 	float lowThreshold;
 	float highThreshold;
-	float contactPosition;
 	float amplitude;
 	float contactVelocity;
 	float phase;
 	float phaseStep;
 	float contactState;
-	unsigned int delay;
+	int delay;
 	int remaining;
 	float pastIn[BE_FILTER_SIZE];
 	float pastOut[BE_FILTER_SIZE];
+	float pastContactState;
+	float rampValue;
+	float rampStep;
+	float scale;
+	int elapsed;
+	unsigned int rampTime;
 } BouncingEnvelope;
 
 
 /**
  * Initialize a new envelope
- * @param length length of the buffer
+ * @param be the object
+ * @param velocity the velocity of the key at onset
+ * @param delay how many samples to wait before starting generating bounces
+ * @param scale envelope scaling width
+ * @param rampTime how many samples to spend ramping up to get from 0..scale to 1-scale..scale
  */
-void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int delay);
+void BouncingEnvelope_init(BouncingEnvelope* be, short velocity, unsigned int delay, float scale, unsigned int rampTime);
 /**
  * Compute a step.
  * @param length the length of the step to compute. Has to be a multiple of MIN_CONTACT_PERIOD

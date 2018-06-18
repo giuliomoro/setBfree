@@ -131,14 +131,16 @@ int BouncingEnvelope_step(BouncingEnvelope* be, unsigned int length, float* buff
 		else
 	       	{
 			// bouncing fast
-			static unsigned int ran = 1;
-			ran = xorshift32(&ran);
-			contactState = ran > RAND_MAX / 2;
+			//static unsigned int ran = 1;
+			//ran = xorshift32(&ran);
+			//contactState = ran > RAND_MAX / 2;
+			contactState = !be->pastContactState;
 		}
 		for(unsigned int j = 0; j < MIN_CONTACT_PERIOD; ++j)
 		{
 			buffer[n +j] = contactState;
 		}
+		be->pastContactState = contactState;
 	}
 	// apply filter
 	int idx = gEnvelopeFilter / 128.f * (sizeof(Bn) / sizeof(float) / 3);

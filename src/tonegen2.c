@@ -1,3 +1,4 @@
+extern int gEnvelopeFilter;
 #include "tonegen.h"
 #include "tonegen_private.h"
 #include <assert.h>
@@ -765,6 +766,78 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
       }
     }
   }
+
+  /* ================================================================
+   *             L E A K A G E R
+     ================================================================ */
+
+	float leakAmount = 0.0001f + gEnvelopeFilter/127.f * 0.2f * (t->contactDownCount /(float)(NOF_CONTACTS_PER_KEY * 61));
+	// if the leaking is audible
+	if(leakAmount > 0.0001)
+	{
+		CoreIns* tmpCoreReader = t->coreReader;
+		CoreIns* oldCoreWriter = t->coreWriter;
+		for (; tmpCoreReader < oldCoreWriter; tmpCoreReader++) {
+			// go through all active oscillators and add some leakage
+		    tmpCoreReader->sgain += leakAmount;
+		    tmpCoreReader->vgain += leakAmount;
+		    tmpCoreReader->pgain += leakAmount;
+		    tmpCoreReader->nsgain += leakAmount;
+		    tmpCoreReader->nvgain += leakAmount;
+		    tmpCoreReader->npgain += leakAmount;
+		}
+		// create core instructions for non-active (leaking only) oscillators
+		// starting from the first sounding wheel, that is 1
+		for(int wheelNumber = 1; wheelNumber < NOF_WHEELS; ++wheelNumber)
+		{
+			if (t->aot[wheelNumber].refCount == 0) {
+				osp = &(t->oscillators[wheelNumber]);
+				int off = 0;
+				int samplesUsed = 0;
+
+				short opr;
+				if(copyDone)
+					opr = CR_ADD;
+				else
+				{
+					opr = CR_CPY;
+					copyDone = 1;
+				}
+				while(samplesUsed < BUFFER_SIZE_SAMPLES)
+				{
+					t->coreWriter->opr = opr;
+					t->coreWriter->sgain = leakAmount;
+					t->coreWriter->pgain = leakAmount;
+					t->coreWriter->vgain = leakAmount;
+					t->coreWriter->nsgain = leakAmount;
+					t->coreWriter->npgain = leakAmount;
+					t->coreWriter->nvgain = leakAmount;
+					t->coreWriter->off = off;
+					t->coreWriter->src = osp->wave + osp->pos;
+
+					int samplesToEndOfSrc = osp->lengthSamples - osp->pos;
+					int samplesUsedInThisIteration;
+					int samplesLeft = BUFFER_SIZE_SAMPLES - samplesUsed;
+					if(samplesToEndOfSrc < samplesLeft)
+					{
+						samplesUsedInThisIteration = samplesToEndOfSrc;
+					}
+					else
+					{
+						samplesUsedInThisIteration = samplesLeft;
+					}
+					t->coreWriter->cnt = samplesUsedInThisIteration;
+					samplesUsed += samplesUsedInThisIteration;
+					off += samplesUsedInThisIteration;
+					if(samplesToEndOfSrc < samplesLeft)
+						osp->pos = 0;
+					else
+						osp->pos += samplesLeft;
+					++t->coreWriter;
+				}
+			}
+		}
+	}
 
   /* ================================================================
 		   C O R E   I N T E R P R E T E R

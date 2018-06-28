@@ -4,7 +4,7 @@ extern int gEnvelopeFilter;
 #include <assert.h>
 #include <stdlib.h>
 //#define OFFLINE
-//#define WRITEFILE
+#define WRITEFILE
 #ifdef OFFLINE
 #undef WRITEFILE
 #endif
@@ -49,14 +49,15 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 		for(int n = FIRST_SOUNDING_KEY; n < TOTAL_SCANNER_KEYS; ++n){
 			for(int bus = 0; bus < NOF_DRAWBARS_PER_MANUAL ; ++bus) {
 				int playingKey = n - FIRST_SOUNDING_KEY;
+				int contact = make_contact(bus, playingKey);
 				float threshold = contactClosingDistance[playingKey][bus];
 				bool onset = false;
 				bool offset = false;
-				if(pos[n] <= threshold && oldPos[n] > threshold)
+				if(pos[n] <= threshold && t->activeContacts[contact] == 0)
 				{ // contact was inactive, we need to turn it on
 					onset = true;
 				}
-				else if(pos[n] > threshold + hyst && oldPos[n] <= threshold + hyst)
+				else if(pos[n] > threshold + hyst && t->activeContacts[contact] > 0)
 				{ // contact was active, we need to turn it off
 					offset = true;
 				}
@@ -78,7 +79,6 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 				}
 				// individual (per-contact) triggering points:
 				// ContactOn / ContactOff
-				int contact = make_contact(bus, playingKey);
 				if(onset)
 					oscContactOn(t, contact, velocity, 0);
 				else if (offset)

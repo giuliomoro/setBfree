@@ -296,10 +296,9 @@ static void contactsSpreadHandler(void *d, unsigned char u)
 {
 	struct b_tonegen *t = (struct b_tonegen *)d;
 	t->spreadHandlerUpdating = 1;
-	oscAllOff(d);
 	//very thread-unsafe flag signalling, but whatever
 	if(u < 64){
-		computeClosingDistance(t, 61, 9, 0.7, 0.705, 0);
+		computeClosingDistance(t, 61, 9, 0.67, 0.67, 0);
 		if(u < 32){
 			printf("Changing closing distance: zero, no velocity\n");
 			t->contactSpread = kSpreadZeroNoV;

@@ -62,7 +62,8 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 					offset = true;
 				}
 				float rawVelocity = -(pos[n] - oldOldPos[n]);
-				short velocity = (rawVelocity) * 170;
+				short velocity = (rawVelocity) * 210;
+
 				if(t->contactSpread == kSpreadZeroNoV
 					|| t->contactSpread == kSpreadZeroV)
 				{
@@ -70,7 +71,6 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 					// KeyOn / KeyOff
 					if(onset)
 					{
-						//rt_printf("count: %7d, playingKey: %d, bus: %d, threshold: %f, pos: %f, oldPos: %f\n", callbackCount, playingKey, bus, threshold, pos[n], oldPos[n]);
 						oscKeyOn(t, playingKey, velocity);
 					}
 					else if (offset)
@@ -251,7 +251,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 
 #ifdef KEYCOMPRESSION
 #ifdef INDIVIDUAL_CONTACTS
-  const float keyComp = t->keyCompTable[t->contactDownCount / (2 * NOF_BUSES)];
+  const float keyComp = t->keyCompTable[t->contactDownCount / (NOF_BUSES)];
 #else
   const float keyComp = t->keyCompTable[t->keyDownCount];
 #endif /* INDIVIDUAL_CONTACTS */
@@ -299,7 +299,8 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
           continue;
         int wheelNumber = LE_WHEEL_NUMBER_OF(lep);
         osp = &(t->oscillators[wheelNumber]);
-	//rt_printf("%3d%s ", (osp - t->oscillators)/sizeof(void*),
+	//rt_printf("wheel: %3d %f%s \n", wheelNumber,
+			//LE_LEVEL_OF(lep),
 			//LE_LEVEL_OF(lep) > 0.3 ? "*" : " "
 			//);
 	//rt_printf("Level: %f refCount: %d\n", LE_LEVEL_OF(lep), t->aot[wheelNumber].refCount);

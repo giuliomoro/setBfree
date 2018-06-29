@@ -310,7 +310,7 @@ static void contactsSpreadHandler(void *d, unsigned char u)
 	}
 	else if(u >= 64 && u < 96){
 		printf("Changing closing distance: normal\n");
-		computeClosingDistance(t, 61, 9, 0.55, 0.7, 0);
+		computeClosingDistance(t, 61, 9, 0.52, 0.67, 0);
 		t->contactSpread = kSpreadNormal;
 	}
 	else if(u > 96){
@@ -362,7 +362,7 @@ static void initValues (struct b_tonegen *t) {
 #endif
 
   t->mute = 0;
-  t->swellPedalGain = 0.028661; // initial level
+  t->swellPedalGain = 0.011024; // initial level
   t->outputLevelTrim = 0.07; // 127/127 * midi-signal
   t->tuning = 440.0;
 
@@ -444,7 +444,7 @@ static void initValues (struct b_tonegen *t) {
       t->oldPos[k][n] = 1;
     }
   }
-  t->contactEnvelopeScale = 0.3;
+  t->contactEnvelopeScale = 0.15;
   t->contactEnvelopeRampTime = 200;
 #endif /* INDIVIDUAL_CONTACTS */
 
@@ -2862,6 +2862,7 @@ static void setPercVolumeFromMIDI (void *d, unsigned char u) {
 static void setSwellPedalFromMIDI (void *d, unsigned char u) {
   struct b_tonegen *t = (struct b_tonegen *) d;
   t->swellPedalGain = (t->outputLevelTrim * ((double) u)) / 127.0;
+  rt_printf("swellPedalGain: %f\n", t->swellPedalGain);
 }
 
 static void toggleMute (void *d, unsigned char u) {

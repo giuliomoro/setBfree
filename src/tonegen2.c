@@ -1,6 +1,7 @@
 extern int gEnvelopeFilter;
 #include "tonegen.h"
 #include "tonegen_private.h"
+#define NDEBUG
 #include <assert.h>
 #include <stdlib.h>
 //#define OFFLINE
@@ -356,8 +357,17 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
         t->aot[wheelNumber].keyCount[LE_BUSNUMBER_OF(lep)] -= 1;
         t->aot[wheelNumber].refCount -= 1;
 
+    if(!(0 <= t->aot[wheelNumber].refCount))
+    {
+        printf("++++Assert two: %d\n", t->aot[wheelNumber].refCount);
+        t->aot[wheelNumber].refCount = 0;
         assert (0 <= t->aot[wheelNumber].refCount);
+    }
+    if(!(-1 < osp->aclPos))
+    {
+        printf("++++Assert three: %d\n", osp->aclPos);
         assert (-1 < osp->aclPos); /* Must be on the active osc list */
+    }
 
         if (t->aot[wheelNumber].refCount == 0) {
           osp->rflags = OR_REM;
@@ -403,8 +413,19 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
         t->aot[wheelNumber].keyCount[LE_BUSNUMBER_OF(lep)] -= 1;
         t->aot[wheelNumber].refCount -= 1;
 
-        assert (0 <= t->aot[wheelNumber].refCount);
-        assert (-1 < osp->aclPos); /* Must be on the active osc list */
+	if(0 <= t->aot[wheelNumber].refCount)
+		printf("wheelNumber: %d, refCount: %d\n", wheelNumber, t->aot[wheelNumber].refCount);
+	if(0 <= t->aot[wheelNumber].refCount)
+	{
+		printf("+++assert four: refCount = %d\n", t->aot[wheelNumber].refCount);
+		t->aot[wheelNumber].refCount = 0;
+		assert (0 <= t->aot[wheelNumber].refCount);
+	}
+	if(!(-1 < osp->aclPos))
+	{
+		printf("++++assert five: aclPos == %d\n", osp->aclPos);
+		assert (-1 < osp->aclPos); /* Must be on the active osc list */
+	}
 
         if (t->aot[wheelNumber].refCount == 0) {
           osp->rflags = OR_REM;
@@ -757,7 +778,11 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
     t->oscillators[vicosc].aclPos = -1; /* Reset victim's backindex */
     t->activeOscLEnd--;
 
-    assert (0 <= t->activeOscLEnd);
+    if(!(0 <= t->activeOscLEnd))
+    {
+	    printf("++++Assert one: %d\n", t->activeOscLEnd);
+	    assert (0 <= t->activeOscLEnd);
+    }
 
     if (0 < t->activeOscLEnd) {	/* If list is not yet empty ... */
       int movosc = t->activeOscList[t->activeOscLEnd]; /* Fill hole w. last entry */

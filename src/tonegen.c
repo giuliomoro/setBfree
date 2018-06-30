@@ -229,6 +229,7 @@ extern int gShouldStop;
 #include <ctype.h>
 #include <limits.h>
 #include <math.h>
+#define NDEBUG
 #include <assert.h>
 #include "tonegen_private.h"
 
@@ -3107,7 +3108,12 @@ void oscKeyOff (struct b_tonegen *t, unsigned char keyNumber, unsigned char real
     }
 #ifdef KEYCOMPRESSION
     t->keyDownCount--;
-    assert (0 <= t->keyDownCount);
+    if(!(0 <= t->keyDownCount))
+    {
+	printf("++++assert six keyDownCount == %d\n", t->keyDownCount);
+	t->keyDownCount = 0;
+	assert (0 <= t->keyDownCount);
+    }
 #endif /* KEYCOMPRESSION */
     /* Write message saying that the key is released */
     *t->msgQueueWriter++ = MSG_KEY_OFF(keyNumber);
@@ -3162,7 +3168,12 @@ void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned 
     /* TODO" handle percussion: count active contacts on percussion bus */
 #ifdef KEYCOMPRESSION
      t->contactDownCount--;
-     assert (0 <= t->contactDownCount);
+     if(!(0 <= t->contactDownCount))
+     {
+	printf("++++assert five contactDownCount = %d\n", t->contactDownCount);
+	t->contactDownCount = 0;
+	assert (0 <= t->contactDownCount);
+     }
 #endif /* KEYCOMPRESSION */
      /* Write message saying that the key is released */
      *t->msgQueueWriter++ = MSG_CONTACT_OFF(contactNumber, velocity, delay);

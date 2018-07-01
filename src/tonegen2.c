@@ -1049,7 +1049,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
   yptr = bufs[0];
   for(i = 0; i < BUFFER_SIZE_SAMPLES; ++i)
   {
-    *y2ptr++ = *yptr++;
+    //*y2ptr++ = *yptr++;
   }
 #ifdef WRITEFILE
   // log audio

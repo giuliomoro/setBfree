@@ -137,7 +137,7 @@ void startKeyboardScanning(struct b_tonegen *t){
 	  t->audioLogFile = file;
   }
 #endif /* WRITEFILE */
-  Keys_setPostCallback(t->keys, postCallback, t);
+  //Keys_setPostCallback(t->keys, postCallback, t);
 #endif /* OFFLINE */
 }
 
@@ -228,6 +228,7 @@ void autoplay(struct b_tonegen *t)
 void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSamples) {
 	/* auto play */
 	//autoplay(t);
+  postCallback((void*)t, NULL, 0); // we call it from here to avoid race conditions.
   // mix inputs to mono and store in the second channel
   if(bufs[1])
   {

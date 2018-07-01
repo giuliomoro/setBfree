@@ -728,7 +728,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
         /* Instruction wraps source buffer */
         CoreIns * prev = t->coreWriter; /* Refer to the first instruction */
         t->coreWriter->cnt = osp->lengthSamples - osp->pos; /* Set len count */
-        osp->pos = BUFFER_SIZE_SAMPLES - t->coreWriter->cnt; /* Updat src pos */
+        osp->pos = BUFFER_SIZE_SAMPLES - t->coreWriter->cnt; /* Update src pos */
 
         t->coreWriter += 1;	/* Advance to next instruction */
 

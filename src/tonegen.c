@@ -2423,8 +2423,8 @@ int oscConfig (struct b_tonegen *t, ConfigContext * cfg) {
     char buf[128];
     ack++;
     if (sscanf (cfg->name, "osc.taper.k%d.b%d.t%d", &k, &b, &w) == 3) {
-      if ((0 < k) && (k < MAX_KEYS)) {
-	if ((0 < b) && (b < NOF_BUSES)) {
+      if ((0 <= k) && (k < MAX_KEYS)) {
+	if ((0 <= b) && (b < NOF_BUSES)) {
 	  if ((0 < w) && (w <= NOF_WHEELS)) {
 	    if (sscanf (cfg->value, "%lf", &v) == 1) {
 	      ListElement * lep = newConfigListElement (t);

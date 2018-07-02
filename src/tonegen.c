@@ -316,7 +316,7 @@ static void contactsSpreadHandler(void *d, unsigned char u)
 	}
 	else if(u > 96){
 		printf("Changing closing distance: wide\n");
-		computeClosingDistance(t, 61, 9, 0.3, 0.85, 0);
+		computeClosingDistance(t, 61, 9, 0.25, 0.81, 0);
 		t->contactSpread = kSpreadWide;
 	}
 	t->spreadHandlerUpdating = 0;

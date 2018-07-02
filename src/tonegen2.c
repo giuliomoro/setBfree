@@ -6,6 +6,7 @@ extern int gEnvelopeFilter;
 #include <stdlib.h>
 //#define OFFLINE
 #define WRITEFILE
+#define WRITEFILE_SPLIT
 #ifdef OFFLINE
 #undef WRITEFILE
 #endif
@@ -20,8 +21,8 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 		return;
 	}
   int mute = 0;
-  {
 	Keys* keys = t->keys;
+  {
 	float* pos = t->pos;
 	float* oldPos = t->oldPos[t->oldPosCurr];
 	float* oldOldPos = t->oldPos[(t->oldPosCurr + 1) % NUM_OLD_POS];
@@ -106,6 +107,22 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 		rt_printf("\n");
 	}
   }
+#ifdef WRITEFILE_SPLIT
+	{
+		float pos[4 + TOTAL_SCANNER_KEYS];
+		uint64_t* timestamp = (uint64_t)pos;
+		*timestamp = t->elapsedSamples;
+		// pos[0..1] is uint63_t timestamp;
+		pos[2] = t->elapsedSamples;
+		// pos[2] is float timestamp
+		pos[3] = t->contactSpread;
+		// pos[3] is touch condition
+		for(int n = 0; n < TOTAL_SCANNER_KEYS; ++n){
+			pos[n + 4] = Keys_getNoteValue(keys, n + 24);
+		}
+		WriteFile_logArray(t->sensorLogFile, pos, TOTAL_SCANNER_KEYS + 4);
+	}
+#endif /* WRITEFILE_SPLIT */
 }
 
 void startKeyboardScanning(struct b_tonegen *t){
@@ -135,6 +152,13 @@ void startKeyboardScanning(struct b_tonegen *t){
 	  WriteFile_init(file, "audio_log.bin", false);
 	  WriteFile_setFileType(file, kBinary);
 	  t->audioLogFile = file;
+
+#ifdef WRITEFILE_SPLIT
+	  WriteFile* sensorLogFile = WriteFile_new();
+	  WriteFile_init(sensorLogFile, "sensor_log.bin", false);
+	  WriteFile_setFileType(sensorLogFile, kBinary);
+	  t->sensorLogFile = sensorLogFile;
+#endif /* WRITEFILE_SPLIT */
   }
 #endif /* WRITEFILE */
   Keys_setPostCallback(t->keys, postCallback, t);
@@ -1033,6 +1057,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
   }
 
 #ifdef WRITEFILE
+#ifndef WRITEFILE_SPLIT
   // log sensors
   {
 	Keys* keys = t->keys;
@@ -1042,6 +1067,7 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
     }
     WriteFile_logArray(t->audioLogFile, pos, TOTAL_SCANNER_KEYS);
   }
+#endif /* WRITEFILE_SPLIT */
 #endif /* WRITEFILE */
   // make organ sound stereo
   float* y2ptr = bufs[1];

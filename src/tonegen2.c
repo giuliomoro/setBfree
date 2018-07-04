@@ -110,7 +110,7 @@ static void postCallback(void* arg, float* buffer, unsigned int length)
 #ifdef WRITEFILE_SPLIT
 	{
 		float pos[4 + TOTAL_SCANNER_KEYS];
-		uint64_t* timestamp = (uint64_t)pos;
+		uint64_t* timestamp = (uint64_t*)pos;
 		*timestamp = t->elapsedSamples;
 		// pos[0..1] is uint63_t timestamp;
 		pos[2] = t->elapsedSamples;

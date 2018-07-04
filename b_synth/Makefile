@@ -58,6 +58,7 @@ PREBUILT=build/src/midi.o \
         build/src/state.o \
         build/src/tonegen.o \
         build/src/tonegen2.o \
+        build/src/ringbuffer.o \
         build/src/pgmParser.o \
         build/src/memstream.o \
         build/src/midnam.o \

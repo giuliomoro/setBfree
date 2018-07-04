@@ -328,9 +328,11 @@ static void initValues (struct b_tonegen *t) {
   t->leRuntime = NULL;
   t->activeOscLEnd = 0;
 
+#ifndef THREAD_SAFE_MSGQUEUE
   t->msgQueueWriter = t->msgQueue;
   t->msgQueueReader = t->msgQueue;
   t->msgQueueEnd = &(t->msgQueue[MSGQSZ]);
+#endif /* THREAD_SAFE_MSGQUEUE */
   t->envAttackModel  = ENV_CLICK;
   t->envReleaseModel = ENV_COSINE;
 
@@ -3037,6 +3039,9 @@ void freeToneGenerator (struct b_tonegen *t) {
   for (i=1; i <= NOF_WHEELS; i++) {
     if (t->oscillators[i].wave) free(t->oscillators[i].wave);
   }
+#ifdef THREAD_SAFE_MSGQUEUE
+  free(t->msgQueueRb);
+#endif /* THREAD_SAFE_MSGQUEUE */
   free(t);
 }
 
@@ -3111,11 +3116,15 @@ void oscKeyOff (struct b_tonegen *t, unsigned char keyNumber, unsigned char real
     }
 #endif /* KEYCOMPRESSION */
     /* Write message saying that the key is released */
+#ifdef THREAD_SAFE_MSGQUEUE
+#error TO BE IMPLEMENTED
+#else /* THREAD_SAFE_MSGQUEUE */
     *t->msgQueueWriter++ = MSG_KEY_OFF(keyNumber);
     /* Check for wrap on message queue */
     if (t->msgQueueWriter == t->msgQueueEnd) {
       t->msgQueueWriter = t->msgQueue;
     }
+#endif /* THREAD_SAFE_MSGQUEUE */
   } /* if key was active */
 
   /*  printf ("\rOFF:%3d", keyNumber); fflush (stdout); */
@@ -3141,11 +3150,15 @@ void oscKeyOn (struct b_tonegen *t, unsigned char keyNumber, unsigned char realK
   t->keyDownCount++;
 #endif /* KEYCOMPRESSION */
   /* Write message */
+#ifdef THREAD_SAFE_MSGQUEUE
+#error TO BE IMPLEMENTED
+#else /* THREAD_SAFE_MSGQUEUE */
   *t->msgQueueWriter++ = MSG_KEY_ON(keyNumber);
   /* Check for wrap on message queue */
   if (t->msgQueueWriter == t->msgQueueEnd) {
     t->msgQueueWriter = t->msgQueue;
   }
+#endif /* THREAD_SAFE_MSGQUEUE */
   /*  printf ("\rON :%3d", keyNumber); fflush (stdout); */
 
 }
@@ -3171,11 +3184,22 @@ void oscContactOff (struct b_tonegen *t, unsigned short contactNumber, unsigned 
      }
 #endif /* KEYCOMPRESSION */
      /* Write message saying that the key is released */
-     *t->msgQueueWriter++ = MSG_CONTACT_OFF(contactNumber, velocity, delay);
+    msg_queue_t msg = MSG_CONTACT_OFF(contactNumber, velocity, delay);
+#ifdef THREAD_SAFE_MSGQUEUE
+    if(rb_available_to_write(t->msgQueueRb) > sizeof(msg))
+    {
+      if(rb_write_to_buffer(t->msgQueueRb, 1, (const char*)&msg, sizeof(msg)))
+      {
+        rt_fprintf(stderr, "Not enough space for the incoming message in the msgQueue\n");
+      }
+    }
+#else /* THREAD_SAFE_MSGQUEUE */
+     *t->msgQueueWriter++ = msg;
      /* Check for wrap on message queue */
      if (t->msgQueueWriter == t->msgQueueEnd) {
        t->msgQueueWriter = t->msgQueue;
      }
+#endif /* THREAD_SAFE_MSGQUEUE */
   } /* if contact was active */
 }
 /**
@@ -3197,11 +3221,22 @@ void oscContactOn (struct b_tonegen *t, unsigned short contactNumber, unsigned s
   t->contactDownCount++;
 #endif /* KEYCOMPRESSION */
   /* Write message */
-  *t->msgQueueWriter++ = MSG_CONTACT_ON(contactNumber, velocity, delay);
+  msg_queue_t msg = MSG_CONTACT_ON(contactNumber, velocity, delay);
+#ifdef THREAD_SAFE_MSGQUEUE
+  if(rb_available_to_write(t->msgQueueRb) > sizeof(msg))
+  {
+    if(rb_write_to_buffer(t->msgQueueRb, 1, (const char*)&msg, sizeof(msg)))
+    {
+      rt_fprintf(stderr, "Not enough space for the incoming message in the msgQueue\n");
+    }
+  }
+#else /* THREAD_SAFE_MSGQUEUE */
+  *t->msgQueueWriter++ = msg;
   /* Check for wrap on message queue */
   if (t->msgQueueWriter == t->msgQueueEnd) {
     t->msgQueueWriter = t->msgQueue;
   }
+#endif /* THREAD_SAFE_MSGQUEUE */
   /*  printf ("\rON :%3d", keyNumber); fflush (stdout); */
 
 }
@@ -3212,6 +3247,16 @@ struct b_tonegen *allocTonegen() {
   if (!t) return NULL;
   initValues(t);
   resetVibrato(t);
+#ifdef THREAD_SAFE_MSGQUEUE
+  if (MSGQSZ & 0xff)
+  {
+    fprintf(stderr, "MSGQSZ must be a multiple of 256, got %u instead\n", MSGQSZ);
+    return NULL;
+  }
+  t->msgQueueRb = rb_create(MSGQSZ);
+  if(!t->msgQueueRb)
+    return NULL;
+#endif /* THREAD_SAFE_MSGQUEUE */
   return (t);
 }
 

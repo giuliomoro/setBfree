@@ -29,6 +29,12 @@
 #include <WriteFile_c.h>
 #include <Keys_c.h>
 
+#define THREAD_SAFE_MSGQUEUE
+
+#ifdef THREAD_SAFE_MSGQUEUE
+#include "ringbuffer.h"
+#endif /* THREAD_SAFE_MSGQUEUE */
+
 #define DEBUG_TONEGEN_OSC 0
 int rt_printf(const char *format, ...);
 
@@ -232,11 +238,15 @@ int activeOscLEnd; /**< end of activeOscList */
  * The size of the message queue.
  */
 #define MSGQSZ 1024
+#ifdef THREAD_SAFE_MSGQUEUE
+ring_buffer* msgQueueRb;
+#else /* THREAD_SAFE_MSGQUEUE */
 msg_queue_t msgQueue [MSGQSZ]; /**< Message queue ringbuffer - MIDI->Synth */
 
 msg_queue_t * msgQueueWriter; /**< message-queue srite pointer */
 msg_queue_t * msgQueueReader; /**< message-queue read pointer */
 msg_queue_t * msgQueueEnd;
+#endif /* THREAD_SAFE_MSGQUEUE */
 
 /*
  * When HIPASS_PERCUSSION is defined it will do two things:

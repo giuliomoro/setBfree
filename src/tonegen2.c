@@ -300,16 +300,25 @@ void oscGenerateFragment (struct b_tonegen *t, float ** bufs, size_t lengthSampl
 		     M E S S S A G E   Q U E U E
      ================================================================ */
 
+#ifdef THREAD_SAFE_MSGQUEUE
+  while (rb_available_to_read(t->msgQueueRb) >= sizeof(msg_queue_t)) {
+#else /* THREAD_SAFE_MSGQUEUE */
   while (t->msgQueueReader != t->msgQueueWriter) {
+#endif /* THREAD_SAFE_MSGQUEUE */
 
+#ifdef THREAD_SAFE_MSGQUEUE
+    msg_queue_t msg;
+    rb_read_from_buffer(t->msgQueueRb, &msg, sizeof(msg));
+#else /* THREAD_SAFE_MSGQUEUE */
     msg_queue_t msg = *t->msgQueueReader++; /* Read next message */
-    int keyNumber;
-    ListElement * lep;
 
     /* Check wrap on message queue */
     if (t->msgQueueReader == t->msgQueueEnd) {
       t->msgQueueReader = t->msgQueue;
     }
+#endif /* THREAD_SAFE_MSGQUEUE */
+    int keyNumber;
+    ListElement * lep;
 
     if (MSG_GET_MSG(msg) == MSG_MCONTACTON) {
       int contactNumber = MSG_GET_NUMBER(msg);

@@ -331,11 +331,6 @@ static void initValues (struct b_tonegen *t) {
   t->msgQueueWriter = t->msgQueue;
   t->msgQueueReader = t->msgQueue;
   t->msgQueueEnd = &(t->msgQueue[MSGQSZ]);
-#ifdef LONG_ENVELOPES
-  t->persQueueWriter = t->persQueue;
-  t->persQueueReader = t->persQueue;
-  t->persQueueEnd = &(t->persQueue[PERQSZ]);
-#endif /* LONG_ENVELOPES */
   t->envAttackModel  = ENV_CLICK;
   t->envReleaseModel = ENV_COSINE;
 

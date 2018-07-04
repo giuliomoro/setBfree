@@ -106,11 +106,6 @@ typedef enum {
 
 //#undef LONG_ENVELOPES
 #define LONG_ENVELOPES
-#ifdef LONG_ENVELOPES
-typedef struct pers_message {
-  
-} PersMessage;
-#endif /* LONG_ENVELOPES */
 
 /**
  * Active oscillator table element.
@@ -242,14 +237,6 @@ msg_queue_t msgQueue [MSGQSZ]; /**< Message queue ringbuffer - MIDI->Synth */
 msg_queue_t * msgQueueWriter; /**< message-queue srite pointer */
 msg_queue_t * msgQueueReader; /**< message-queue read pointer */
 msg_queue_t * msgQueueEnd;
-
-#ifdef LONG_ENVELOPES
-#define PERQSZ 1024 // should actually be the total number of contacts
-PersMessage   persQueue [PERQSZ];
-PersMessage * persQueueWriter;
-PersMessage * persQueueReader;
-PersMessage * persQueueEnd;
-#endif /* LONG_ENVELOPES */
 
 /*
  * When HIPASS_PERCUSSION is defined it will do two things:

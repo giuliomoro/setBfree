@@ -2562,11 +2562,11 @@ static void initEnvelopes (struct b_tonegen *t) {
       /* Select a random length of this burst. */
       bound = t->envAtkClkMaxLength - t->envAtkClkMinLength;
       if (bound < 1) {
-	bound = 1;
+        bound = 1;
       }
       burst = t->envAtkClkMinLength + (rand () % bound);
       if (bss <= burst) {
-	burst = bss - 1;
+        burst = bss - 1;
       }
       /* Select a random start position of the burst. */
       start = (rand () % (bss - burst));
@@ -2574,7 +2574,7 @@ static void initEnvelopes (struct b_tonegen *t) {
       for (i = 0; i < start; i++) t->attackEnv[b][i] = 0.0;
       /* In the burst area the amplification is random. */
       for (; i < (start + burst); i++) {
-	t->attackEnv[b][i] = 1.0 - (t->envAttackClickLevel * drnd ());
+        t->attackEnv[b][i] = 1.0 - (t->envAttackClickLevel * drnd ());
       }
       /* From the end of the burst to the end of the envelope the
 	 amplification is unity. */
@@ -2584,10 +2584,10 @@ static void initEnvelopes (struct b_tonegen *t) {
       /* 2002-08-31/FK EXPERIMENTAL */
       /* Two-point average low-pass filter. */
       {
-	t->attackEnv[b][0] /= 2.0;
-	for (i = 1; i < bss; i++) {
-	  t->attackEnv[b][i] = (t->attackEnv[b][i-1] + t->attackEnv[b][i]) / 2.0;
-	}
+        t->attackEnv[b][0] /= 2.0;
+        for (i = 1; i < bss; i++) {
+          t->attackEnv[b][i] = (t->attackEnv[b][i-1] + t->attackEnv[b][i]) / 2.0;
+        }
       }
 #endif
 
@@ -2602,7 +2602,7 @@ static void initEnvelopes (struct b_tonegen *t) {
       t->attackEnv[b][i + 0] = 0.33333333;
       t->attackEnv[b][i + 1] = 0.66666666;
       for (i = i + 2; i < bss; i++) {
-	t->attackEnv[b][i] = 1.0;
+        t->attackEnv[b][i] = 1.0;
       }
     }
 
@@ -2615,7 +2615,7 @@ static void initEnvelopes (struct b_tonegen *t) {
       t->releaseEnv[b][i + 0] = 0.33333333;
       t->releaseEnv[b][i + 1] = 0.66666666;
       for (i = i + 2; i < bss; i++) {
-	t->releaseEnv[b][i] = 1.0;
+        t->releaseEnv[b][i] = 1.0;
       }
     }
 
@@ -2625,13 +2625,13 @@ static void initEnvelopes (struct b_tonegen *t) {
 
       for (i = 0; i < start; i++) t->releaseEnv[b][i] = 0.0;
       for (; i < (start + burst); i++) {
-	t->releaseEnv[b][i] = 1.0 - (t->envReleaseClickLevel * drnd ());
+        t->releaseEnv[b][i] = 1.0 - (t->envReleaseClickLevel * drnd ());
       }
       for (; i < bss; i++) t->releaseEnv[b][i] = 1.0;
       /* Filter the envelope */
       t->releaseEnv[b][0] /= 2.0;
       for (i = 1; i < bss; i++) {
-	t->releaseEnv[b][i] = (t->releaseEnv[b][i-1] + t->releaseEnv[b][i]) / 2.0;
+        t->releaseEnv[b][i] = (t->releaseEnv[b][i-1] + t->releaseEnv[b][i]) / 2.0;
       }
     }
 
@@ -3223,10 +3223,10 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
       t->coreWriter->env = t->releaseEnv[i & 7];
 
       if (copyDone) {
-	t->coreWriter->opr = CR_ADDENV;
+        t->coreWriter->opr = CR_ADDENV;
       } else {
-	t->coreWriter->opr = CR_CPYENV;
-	copyDone = 1;
+        t->coreWriter->opr = CR_CPYENV;
+        copyDone = 1;
       }
 
       t->coreWriter->src = osp->wave + osp->pos;
@@ -3239,28 +3239,28 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
       if (osp->lengthSamples < (osp->pos + BUFFER_SIZE_SAMPLES)) {
 	/* Need another instruction because of wrap */
-	CoreIns * prev = t->coreWriter;
-	t->coreWriter->cnt = osp->lengthSamples - osp->pos;
-	osp->pos = BUFFER_SIZE_SAMPLES - t->coreWriter->cnt;
-	t->coreWriter += 1;
-	t->coreWriter->opr = prev->opr;
-	t->coreWriter->src = osp->wave;
-	t->coreWriter->off = prev->cnt;
-	t->coreWriter->env = prev->env + prev->cnt;
+        CoreIns * prev = t->coreWriter;
+        t->coreWriter->cnt = osp->lengthSamples - osp->pos;
+        osp->pos = BUFFER_SIZE_SAMPLES - t->coreWriter->cnt;
+        t->coreWriter += 1;
+        t->coreWriter->opr = prev->opr;
+        t->coreWriter->src = osp->wave;
+        t->coreWriter->off = prev->cnt;
+        t->coreWriter->env = prev->env + prev->cnt;
 
-	t->coreWriter->sgain = prev->sgain;
-	t->coreWriter->pgain = prev->pgain;
-	t->coreWriter->vgain = prev->vgain;
+        t->coreWriter->sgain = prev->sgain;
+        t->coreWriter->pgain = prev->pgain;
+        t->coreWriter->vgain = prev->vgain;        
 
-	t->coreWriter->nsgain = prev->nsgain;
-	t->coreWriter->npgain = prev->npgain;
-	t->coreWriter->nvgain = prev->nvgain;
+        t->coreWriter->nsgain = prev->nsgain;
+        t->coreWriter->npgain = prev->npgain;
+        t->coreWriter->nvgain = prev->nvgain;
 
-	t->coreWriter->cnt = osp->pos;
+        t->coreWriter->cnt = osp->pos;
       }
       else {
-	t->coreWriter->cnt = BUFFER_SIZE_SAMPLES;
-	osp->pos += BUFFER_SIZE_SAMPLES;
+        t->coreWriter->cnt = BUFFER_SIZE_SAMPLES;
+        osp->pos += BUFFER_SIZE_SAMPLES;
       }
 
       t->coreWriter += 1;
@@ -3273,91 +3273,91 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
        * used. For modified oscillators we provide the update below.
        */
       if (osp->rflags & ORF_ADDED) {
-	t->coreWriter->sgain = t->coreWriter->pgain = t->coreWriter->vgain = 0.0;
+        t->coreWriter->sgain = t->coreWriter->pgain = t->coreWriter->vgain = 0.0;
       }
       else {
-	t->coreWriter->sgain = aop->sumSwell;
-	t->coreWriter->pgain = aop->sumPercn;
-	t->coreWriter->vgain = aop->sumScanr;
+        t->coreWriter->sgain = aop->sumSwell;
+        t->coreWriter->pgain = aop->sumPercn;
+        t->coreWriter->vgain = aop->sumScanr;
       }
 
       /* Update the oscillator's contribution to each busgroup mix */
 
       if ((osp->rflags & ORF_MODIFIED) || t->drawBarChange) {
-	int d;
-	float sum = 0.0;
+        int d;
+        float sum = 0.0;
 
-	for (d = UPPER_BUS_LO; d < UPPER_BUS_END; d++) {
-	  sum += aop->busLevel[d] * t->drawBarGain[d];
-	}
-	aop->sumUpper = sum;
-	sum = 0.0;
-	for (d = LOWER_BUS_LO; d < LOWER_BUS_END; d++) {
-	  sum += aop->busLevel[d] * t->drawBarGain[d];
-	}
-	aop->sumLower = sum;
-	sum = 0.0;
-	for (d = PEDAL_BUS_LO; d < PEDAL_BUS_END; d++) {
-	  sum += aop->busLevel[d] * t->drawBarGain[d];
-	}
-	aop->sumPedal = sum;
-	reroute = 1;
+        for (d = UPPER_BUS_LO; d < UPPER_BUS_END; d++) {
+	         sum += aop->busLevel[d] * t->drawBarGain[d];
+        }
+        aop->sumUpper = sum;
+        sum = 0.0;
+        for (d = LOWER_BUS_LO; d < LOWER_BUS_END; d++) {
+          sum += aop->busLevel[d] * t->drawBarGain[d];
+        }
+        aop->sumLower = sum;
+        sum = 0.0;
+        for (d = PEDAL_BUS_LO; d < PEDAL_BUS_END; d++) {
+          sum += aop->busLevel[d] * t->drawBarGain[d];
+        }
+        aop->sumPedal = sum;
+        reroute = 1;
       }
 
       /* If the group mix or routing has changed */
 
       if (reroute || recomputeRouting) {
 
-	if (t->oldRouting & RT_PERC) { /* Percussion */
-	  aop->sumPercn = aop->busLevel[t->percSendBus];
-	}
-	else {
-	  aop->sumPercn = 0.0;
-	}
+        if (t->oldRouting & RT_PERC) { /* Percussion */
+	         aop->sumPercn = aop->busLevel[t->percSendBus];
+        }
+        else {
+          aop->sumPercn = 0.0;
+        }
 
-	aop->sumScanr = 0.0;	/* Initialize scanner level */
-	aop->sumSwell = aop->sumPedal; /* Initialize swell level */
+        aop->sumScanr = 0.0;	/* Initialize scanner level */
+        aop->sumSwell = aop->sumPedal; /* Initialize swell level */
 
-	if (t->oldRouting & RT_UPPRVIB) { /* Upper manual ... */
-	  aop->sumScanr += aop->sumUpper; /* ... to vibrato */
-	}
-	else {
-	  aop->sumSwell += aop->sumUpper; /* ... to swell pedal */
-	}
+        if (t->oldRouting & RT_UPPRVIB) { /* Upper manual ... */
+          aop->sumScanr += aop->sumUpper; /* ... to vibrato */
+        }
+        else {
+          aop->sumSwell += aop->sumUpper; /* ... to swell pedal */
+        }
 
-	if (t->oldRouting & RT_LOWRVIB) { /* Lower manual ... */
-	  aop->sumScanr += aop->sumLower; /* ... to vibrato */
-	}
-	else {
-	  aop->sumSwell += aop->sumLower; /* ... to swell pedal */
-	}
+        if (t->oldRouting & RT_LOWRVIB) { /* Lower manual ... */
+          aop->sumScanr += aop->sumLower; /* ... to vibrato */
+        }
+        else {
+          aop->sumSwell += aop->sumLower; /* ... to swell pedal */
+        }
       }	/* if rerouting */
 
       /* Emit instructions for oscillator */
       if (osp->rflags & OR_ADD) {
-	/* Envelope attack instruction */
-	t->coreWriter->env = t->attackEnv[i & 7];
-	/* Next gain values */
-	t->coreWriter->nsgain = aop->sumSwell;
-	t->coreWriter->npgain = aop->sumPercn;
-	t->coreWriter->nvgain = aop->sumScanr;
+        /* Envelope attack instruction */
+        t->coreWriter->env = t->attackEnv[i & 7];
+        /* Next gain values */
+        t->coreWriter->nsgain = aop->sumSwell;
+        t->coreWriter->npgain = aop->sumPercn;
+        t->coreWriter->nvgain = aop->sumScanr;        
 
-	if (copyDone) {
-	  t->coreWriter->opr = CR_ADDENV;
-	}
-	else {
-	  t->coreWriter->opr = CR_CPYENV;
-	  copyDone = 1;
-	}
+        if (copyDone) {
+	      t->coreWriter->opr = CR_ADDENV;
+        }
+        else {
+          t->coreWriter->opr = CR_CPYENV;
+          copyDone = 1;
+        }
       }
       else {
-	if (copyDone) {
-	  t->coreWriter->opr = CR_ADD;
-	}
-	else {
-	  t->coreWriter->opr = CR_CPY;
-	  copyDone = 1;
-	}
+        if (copyDone) {
+          t->coreWriter->opr = CR_ADD;
+        }
+        else {
+          t->coreWriter->opr = CR_CPY;
+          copyDone = 1;
+        }
       }
 
       /* The source is the wave of the oscillator at its current position */
@@ -3367,32 +3367,32 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
       if (osp->lengthSamples < (osp->pos + BUFFER_SIZE_SAMPLES)) {
 	/* Instruction wraps source buffer */
-	CoreIns * prev = t->coreWriter; /* Refer to the first instruction */
-	t->coreWriter->cnt = osp->lengthSamples - osp->pos; /* Set len count */
-	osp->pos = BUFFER_SIZE_SAMPLES - t->coreWriter->cnt; /* Updat src pos */
+        CoreIns * prev = t->coreWriter; /* Refer to the first instruction */
+        t->coreWriter->cnt = osp->lengthSamples - osp->pos; /* Set len count */
+        osp->pos = BUFFER_SIZE_SAMPLES - t->coreWriter->cnt; /* Updat src pos */
 
-	t->coreWriter += 1;	/* Advance to next instruction */
+        t->coreWriter += 1;	/* Advance to next instruction */
 
-	t->coreWriter->opr = prev->opr; /* Same operation */
-	t->coreWriter->src = osp->wave; /* Start of wave because of wrap */
-	t->coreWriter->off = prev->cnt;
-	if (t->coreWriter->opr & 2) {
-	  t->coreWriter->env = prev->env + prev->cnt; /* Continue envelope */
-	}
-	/* The gains are identical to the previous instruction */
-	t->coreWriter->sgain = prev->sgain;
-	t->coreWriter->pgain = prev->pgain;
-	t->coreWriter->vgain = prev->vgain;
+        t->coreWriter->opr = prev->opr; /* Same operation */
+        t->coreWriter->src = osp->wave; /* Start of wave because of wrap */
+        t->coreWriter->off = prev->cnt;
+        if (t->coreWriter->opr & 2) {
+		  t->coreWriter->env = prev->env + prev->cnt; /* Continue envelope */
+        }
+        /* The gains are identical to the previous instruction */
+        t->coreWriter->sgain = prev->sgain;
+        t->coreWriter->pgain = prev->pgain;
+        t->coreWriter->vgain = prev->vgain;
 
-	t->coreWriter->nsgain = prev->nsgain;
-	t->coreWriter->npgain = prev->npgain;
-	t->coreWriter->nvgain = prev->nvgain;
+        t->coreWriter->nsgain = prev->nsgain;
+        t->coreWriter->npgain = prev->npgain;
+        t->coreWriter->nvgain = prev->nvgain;
 
-	t->coreWriter->cnt = osp->pos; /* Up to next read position */
+        t->coreWriter->cnt = osp->pos; /* Up to next read position */
       }
       else {
-	t->coreWriter->cnt = BUFFER_SIZE_SAMPLES;
-	osp->pos += BUFFER_SIZE_SAMPLES;
+        t->coreWriter->cnt = BUFFER_SIZE_SAMPLES;
+        osp->pos += BUFFER_SIZE_SAMPLES;
       }
 
       t->coreWriter += 1;	/* Advance to next instruction */
@@ -3474,41 +3474,41 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
 
     if (opr & 1) {		/* ADD and ADDENV */
       if (opr & 2) {		/* ADDENV */
-	for (; 0 < n; n--) {
-	  float x = (float) (*xp++);
-	  const float e = *ep++;
-	  *ys++ += x * (gs + (e * ds));
-	  *yv++ += x * (gv + (e * dv));
-	  *yp++ += x * (gp + (e * dp));
-	}
+        for (; 0 < n; n--) {
+          float x = (float) (*xp++);
+          const float e = *ep++;
+          *ys++ += x * (gs + (e * ds));
+          *yv++ += x * (gv + (e * dv));
+          *yp++ += x * (gp + (e * dp));
+        }
       } else {			/* ADD */
-	for (; 0 < n; n--) {
-	  const float x = (float) (*xp++);
-	  *ys++ += x * gs;
-	  *yv++ += x * gv;
-	  *yp++ += x * gp;
-	}
+        for (; 0 < n; n--) {
+          const float x = (float) (*xp++);
+          *ys++ += x * gs;
+          *yv++ += x * gv;
+          *yp++ += x * gp;
+        }
       }
 
     } else {
 
       if (opr & 2) {		/* CPY and CPYENV */
-	for (; 0 < n; n--) {	/* CPYENV */
-	  const float x = (float) (*xp++);
-	  const float e =  *ep++;
-	  *ys++ = x * (gs + (e * ds));
-	  *yv++ = x * (gv + (e * dv));
-	  *yp++ = x * (gp + (e * dp));
-	}
+        for (; 0 < n; n--) {	/* CPYENV */
+          const float x = (float) (*xp++);
+          const float e =  *ep++;
+          *ys++ = x * (gs + (e * ds));
+          *yv++ = x * (gv + (e * dv));
+          *yp++ = x * (gp + (e * dp));
+        }
 
       } else {
 
-	for (; 0 < n; n--) {	/* CPY */
-	  const float x = (float) (*xp++);
-	  *ys++ = x * gs;
-	  *yv++ = x * gv;
-	  *yp++ = x * gp;
-	}
+        for (; 0 < n; n--) {	/* CPY */
+          const float x = (float) (*xp++);
+          *ys++ = x * gs;
+          *yv++ = x * gv;
+          *yp++ = x * gp;
+        }
 
       }
     }
@@ -3548,9 +3548,9 @@ void oscGenerateFragment (struct b_tonegen *t, float * buf, size_t lengthSamples
       float temp = *tp;
       pp = tp - 1;
       for (i = 1; i < BUFFER_SIZE_SAMPLES; i++) {
-	*tp = *pp - *tp;
-	tp--;
-	pp--;
+        *tp = *pp - *tp;
+        tp--;
+        pp--;
       }
       *tp = t->pz - *tp;
       t->pz = temp;
